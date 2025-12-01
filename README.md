@@ -44,7 +44,7 @@ README.md
 .gitignore  
 
 ## 3. Technologies Used
-- SQLite (or MySQL/PostgreSQL)
+-
 - Python 3.x
 - NiceGUI (for GUI)
 - GitHub for version control
@@ -58,11 +58,3 @@ README.md
 ## 5. How to Run the Project
 To run the backend and GUI:
 
-1. Install Python 3.x  
-2. Clone this repository  
-3. Navigate to the backend folder  
-4. Run:
-```
-python app.py
-```
-If you want it expanded with database setup instructions, contribution guidelines or architecture notes, I can add that too.
