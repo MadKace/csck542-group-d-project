@@ -7,8 +7,8 @@ CREATE TABLE department (
     faculty TEXT
 );
 
-CREATE TABLE program (
-    program_id INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE programme (
+    programme_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     degree_awarded TEXT,
     duration_years INTEGER CHECK (duration_years > 0),
@@ -25,14 +25,14 @@ CREATE TABLE lecturer (
 
 CREATE TABLE student (
     student_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    program_id INTEGER NOT NULL,
+    programme_id INTEGER NOT NULL,
     advisor_id INTEGER,
     name TEXT NOT NULL,
     date_of_birth DATE,
     contact_info TEXT,
     year_of_study INTEGER CHECK (year_of_study > 0),
     graduation_status TEXT,
-    FOREIGN KEY (program_id) REFERENCES program(program_id),
+    FOREIGN KEY (programme_id) REFERENCES programme(programme_id),
     FOREIGN KEY (advisor_id) REFERENCES lecturer(lecturer_id)
 );
 
@@ -189,12 +189,12 @@ CREATE TABLE course_prerequisite (
     FOREIGN KEY (prerequisite_id) REFERENCES course(course_id)
 );
 
-CREATE TABLE program_course (
-    program_id INTEGER,
+CREATE TABLE programme_course (
+    programme_id INTEGER,
     course_id INTEGER,
-    is_required INTEGER,
-    PRIMARY KEY (program_id, course_id),
-    FOREIGN KEY (program_id) REFERENCES program(program_id),
+    is_required INTEGER DEFAULT 1,
+    PRIMARY KEY (programme_id, course_id),
+    FOREIGN KEY (programme_id) REFERENCES programme(programme_id),
     FOREIGN KEY (course_id) REFERENCES course(course_id)
 );
 
