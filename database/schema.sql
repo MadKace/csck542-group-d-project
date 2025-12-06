@@ -205,3 +205,13 @@ CREATE TABLE research_project_member (
     FOREIGN KEY (project_id) REFERENCES research_project(project_id),
     FOREIGN KEY (student_id) REFERENCES student(student_id)
 );
+
+-- Indexes on foreign keys to improve join performance
+CREATE INDEX idx_student_programme ON student(programme_id);
+CREATE INDEX idx_student_advisor ON student(advisor_id);
+CREATE INDEX idx_lecturer_dept ON lecturer(dept_id);
+CREATE INDEX idx_course_dept ON course(dept_id);
+CREATE INDEX idx_student_grade_student ON student_grade(student_id);
+CREATE INDEX idx_student_grade_course ON student_grade(course_id);
+CREATE INDEX idx_publication_lecturer ON publication(lecturer_id);
+CREATE INDEX idx_research_project_dept ON research_project(dept_id);
