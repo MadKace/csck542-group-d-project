@@ -11,7 +11,7 @@ CREATE TABLE program (
     program_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     degree_awarded TEXT,
-    duration_years INTEGER,
+    duration_years INTEGER CHECK (duration_years > 0),
     enrolment_details TEXT
 );
 
@@ -30,7 +30,7 @@ CREATE TABLE student (
     name TEXT NOT NULL,
     date_of_birth DATE,
     contact_info TEXT,
-    year_of_study INTEGER,
+    year_of_study INTEGER CHECK (year_of_study > 0),
     graduation_status TEXT,
     FOREIGN KEY (program_id) REFERENCES program(program_id),
     FOREIGN KEY (advisor_id) REFERENCES lecturer(lecturer_id)
@@ -43,7 +43,7 @@ CREATE TABLE course (
     name TEXT NOT NULL,
     description TEXT,
     level TEXT,
-    credits INTEGER,
+    credits INTEGER CHECK (credits > 0),
     schedule TEXT,
     FOREIGN KEY (dept_id) REFERENCES department(dept_id)
 );
@@ -55,7 +55,7 @@ CREATE TABLE non_academic_staff (
     job_title TEXT,
     employment_type TEXT,
     contract_details TEXT,
-    salary REAL,
+    salary REAL CHECK (salary >= 0),
     emergency_contact TEXT,
     FOREIGN KEY (dept_id) REFERENCES department(dept_id)
 );
@@ -85,7 +85,7 @@ CREATE TABLE student_grade (
     student_id INTEGER NOT NULL,
     course_id INTEGER NOT NULL,
     assessment_type TEXT,
-    grade INTEGER,
+    grade INTEGER CHECK (grade >= 0 AND grade <= 100),
     date_recorded DATE,
     FOREIGN KEY (student_id) REFERENCES student(student_id),
     FOREIGN KEY (course_id) REFERENCES course(course_id)
@@ -143,7 +143,7 @@ CREATE TABLE project_funding (
     funding_id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id INTEGER NOT NULL,
     source_name TEXT NOT NULL,
-    amount REAL,
+    amount REAL CHECK (amount >= 0),
     FOREIGN KEY (project_id) REFERENCES research_project(project_id)
 );
 
