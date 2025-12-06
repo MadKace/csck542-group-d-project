@@ -1,3 +1,6 @@
+-- University Record Management System Database Schema
+-- CSCK542 Databases and Information Systems
+
 -- Drop existing tables
 DROP TABLE IF EXISTS research_project_member;
 DROP TABLE IF EXISTS programme_course;
