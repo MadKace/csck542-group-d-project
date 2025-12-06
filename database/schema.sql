@@ -1,3 +1,28 @@
+-- Drop existing tables
+DROP TABLE IF EXISTS research_project_member;
+DROP TABLE IF EXISTS programme_course;
+DROP TABLE IF EXISTS course_prerequisite;
+DROP TABLE IF EXISTS lecturer_course;
+DROP TABLE IF EXISTS student_course;
+DROP TABLE IF EXISTS project_outcome;
+DROP TABLE IF EXISTS project_publication;
+DROP TABLE IF EXISTS project_funding;
+DROP TABLE IF EXISTS department_research_area;
+DROP TABLE IF EXISTS course_material;
+DROP TABLE IF EXISTS publication;
+DROP TABLE IF EXISTS lecturer_research_interest;
+DROP TABLE IF EXISTS lecturer_expertise;
+DROP TABLE IF EXISTS lecturer_qualification;
+DROP TABLE IF EXISTS student_grade;
+DROP TABLE IF EXISTS disciplinary_record;
+DROP TABLE IF EXISTS research_project;
+DROP TABLE IF EXISTS non_academic_staff;
+DROP TABLE IF EXISTS course;
+DROP TABLE IF EXISTS student;
+DROP TABLE IF EXISTS lecturer;
+DROP TABLE IF EXISTS programme;
+DROP TABLE IF EXISTS department;
+
 -- Enable foreign key enforcement
 PRAGMA foreign_keys = ON;
 
