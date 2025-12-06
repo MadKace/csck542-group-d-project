@@ -205,11 +205,3 @@ CREATE TABLE research_project_member (
     FOREIGN KEY (group_id) REFERENCES research_project(project_id),
     FOREIGN KEY (student_id) REFERENCES student(student_id)
 );
-
-CREATE TABLE project_member (
-    project_id INTEGER,
-    student_id INTEGER,
-    PRIMARY KEY (project_id, student_id),
-    FOREIGN KEY (project_id) REFERENCES research_project(project_id),
-    FOREIGN KEY (student_id) REFERENCES student(student_id)
-);
