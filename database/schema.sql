@@ -3,13 +3,13 @@ PRAGMA foreign_keys = ON;
 
 CREATE TABLE department (
     dept_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
+    name TEXT NOT NULL UNIQUE,
     faculty TEXT
 );
 
 CREATE TABLE program (
     program_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
+    name TEXT NOT NULL,
     degree_awarded TEXT,
     duration_years INTEGER,
     enrolment_details TEXT
@@ -17,17 +17,17 @@ CREATE TABLE program (
 
 CREATE TABLE lecturer (
     lecturer_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    dept_id INTEGER,
-    name TEXT,
+    dept_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
     course_load INTEGER,
     FOREIGN KEY (dept_id) REFERENCES department(dept_id)
 );
 
 CREATE TABLE student (
     student_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    program_id INTEGER,
+    program_id INTEGER NOT NULL,
     advisor_id INTEGER,
-    name TEXT,
+    name TEXT NOT NULL,
     date_of_birth DATE,
     contact_info TEXT,
     year_of_study INTEGER,
@@ -38,9 +38,9 @@ CREATE TABLE student (
 
 CREATE TABLE course (
     course_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    dept_id INTEGER,
-    course_code TEXT,
-    name TEXT,
+    dept_id INTEGER NOT NULL,
+    course_code TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
     description TEXT,
     level TEXT,
     credits INTEGER,
@@ -51,7 +51,7 @@ CREATE TABLE course (
 CREATE TABLE non_academic_staff (
     staff_id INTEGER PRIMARY KEY AUTOINCREMENT,
     dept_id INTEGER,
-    name TEXT,
+    name TEXT NOT NULL,
     job_title TEXT,
     employment_type TEXT,
     contract_details TEXT,
@@ -62,9 +62,9 @@ CREATE TABLE non_academic_staff (
 
 CREATE TABLE research_project (
     project_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    head_lecturer_id INTEGER UNIQUE,
+    head_lecturer_id INTEGER NOT NULL UNIQUE,
     dept_id INTEGER,
-    title TEXT,
+    title TEXT NOT NULL,
     start_date DATE,
     end_date DATE,
     FOREIGN KEY (head_lecturer_id) REFERENCES lecturer(lecturer_id),
@@ -73,7 +73,7 @@ CREATE TABLE research_project (
 
 CREATE TABLE disciplinary_record (
     record_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    student_id INTEGER,
+    student_id INTEGER NOT NULL,
     incident_date DATE,
     description TEXT,
     action_taken TEXT,
@@ -82,8 +82,8 @@ CREATE TABLE disciplinary_record (
 
 CREATE TABLE student_grade (
     grade_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    student_id INTEGER,
-    course_id INTEGER,
+    student_id INTEGER NOT NULL,
+    course_id INTEGER NOT NULL,
     assessment_type TEXT,
     grade INTEGER,
     date_recorded DATE,
@@ -93,8 +93,8 @@ CREATE TABLE student_grade (
 
 CREATE TABLE lecturer_qualification (
     qualification_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    lecturer_id INTEGER,
-    qualification_name TEXT,
+    lecturer_id INTEGER NOT NULL,
+    qualification_name TEXT NOT NULL,
     institution TEXT,
     year_awarded INTEGER,
     FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id)
@@ -102,22 +102,22 @@ CREATE TABLE lecturer_qualification (
 
 CREATE TABLE lecturer_expertise (
     expertise_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    lecturer_id INTEGER,
-    area TEXT,
+    lecturer_id INTEGER NOT NULL,
+    area TEXT NOT NULL,
     FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id)
 );
 
 CREATE TABLE lecturer_research_interest (
     interest_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    lecturer_id INTEGER,
-    interest TEXT,
+    lecturer_id INTEGER NOT NULL,
+    interest TEXT NOT NULL,
     FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id)
 );
 
 CREATE TABLE publication (
     publication_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    lecturer_id INTEGER,
-    title TEXT,
+    lecturer_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
     journal TEXT,
     publication_date DATE,
     FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id)
@@ -125,8 +125,8 @@ CREATE TABLE publication (
 
 CREATE TABLE course_material (
     material_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    course_id INTEGER,
-    title TEXT,
+    course_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
     material_type TEXT,
     url TEXT,
     FOREIGN KEY (course_id) REFERENCES course(course_id)
@@ -134,31 +134,31 @@ CREATE TABLE course_material (
 
 CREATE TABLE department_research_area (
     area_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    dept_id INTEGER,
-    area TEXT,
+    dept_id INTEGER NOT NULL,
+    area TEXT NOT NULL,
     FOREIGN KEY (dept_id) REFERENCES department(dept_id)
 );
 
 CREATE TABLE project_funding (
     funding_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER,
-    source_name TEXT,
+    project_id INTEGER NOT NULL,
+    source_name TEXT NOT NULL,
     amount REAL,
     FOREIGN KEY (project_id) REFERENCES research_project(project_id)
 );
 
 CREATE TABLE project_publication (
     project_pub_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER,
-    title TEXT,
+    project_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
     publication_date DATE,
     FOREIGN KEY (project_id) REFERENCES research_project(project_id)
 );
 
 CREATE TABLE project_outcome (
     outcome_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER,
-    description TEXT,
+    project_id INTEGER NOT NULL,
+    description TEXT NOT NULL,
     outcome_date DATE,
     FOREIGN KEY (project_id) REFERENCES research_project(project_id)
 );
@@ -205,4 +205,3 @@ CREATE TABLE research_project_member (
     FOREIGN KEY (project_id) REFERENCES research_project(project_id),
     FOREIGN KEY (student_id) REFERENCES student(student_id)
 );
-
