@@ -1,67 +1,70 @@
+-- Enable foreign key enforcement
+PRAGMA foreign_keys = ON;
+
 CREATE TABLE department (
-    dept_id INT PRIMARY KEY,
-    name VARCHAR(100),
-    faculty VARCHAR(100)
+    dept_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    faculty TEXT
 );
 
 CREATE TABLE program (
-    program_id INT PRIMARY KEY,
-    name VARCHAR(100),
-    degree_awarded VARCHAR(50),
-    duration_years INT,
-    enrolment_details VARCHAR
+    program_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    degree_awarded TEXT,
+    duration_years INTEGER,
+    enrolment_details TEXT
 );
 
 CREATE TABLE lecturer (
-    lecturer_id INT PRIMARY KEY,
-    dept_id INT,
-    name VARCHAR(100),
-    course_load INT,
+    lecturer_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dept_id INTEGER,
+    name TEXT,
+    course_load INTEGER,
     FOREIGN KEY (dept_id) REFERENCES department(dept_id)
 );
 
 CREATE TABLE student (
-    student_id INT PRIMARY KEY,
-    program_id INT,
-    advisor_id INT,
-    name VARCHAR(100),
+    student_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id INTEGER,
+    advisor_id INTEGER,
+    name TEXT,
     date_of_birth DATE,
-    contact_info VARCHAR(200),
-    year_of_study INT,
-    graduation_status VARCHAR,
+    contact_info TEXT,
+    year_of_study INTEGER,
+    graduation_status TEXT,
     FOREIGN KEY (program_id) REFERENCES program(program_id),
     FOREIGN KEY (advisor_id) REFERENCES lecturer(lecturer_id)
 );
 
 CREATE TABLE course (
-    course_id INT PRIMARY KEY,
-    dept_id INT,
-    course_code VARCHAR(20),
-    name VARCHAR(100),
-    description VARCHAR(500),
-    level VARCHAR(50),
-    credits INT,
-    schedule VARCHAR(100),
+    course_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dept_id INTEGER,
+    course_code TEXT,
+    name TEXT,
+    description TEXT,
+    level TEXT,
+    credits INTEGER,
+    schedule TEXT,
     FOREIGN KEY (dept_id) REFERENCES department(dept_id)
 );
 
 CREATE TABLE non_academic_staff (
-    staff_id INT PRIMARY KEY,
-    dept_id INT,
-    name VARCHAR(100),
-    job_title VARCHAR(100),
-    employment_type VARCHAR(50),
-    contract_details VARCHAR,
-    salary DECIMAL(10,2),
-    emergency_contact VARCHAR,
+    staff_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dept_id INTEGER,
+    name TEXT,
+    job_title TEXT,
+    employment_type TEXT,
+    contract_details TEXT,
+    salary REAL,
+    emergency_contact TEXT,
     FOREIGN KEY (dept_id) REFERENCES department(dept_id)
 );
 
 CREATE TABLE research_project (
-    project_id INT PRIMARY KEY,
-    head_lecturer_id INT,
-    dept_id INT,
-    title VARCHAR(200),
+    project_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    head_lecturer_id INTEGER,
+    dept_id INTEGER,
+    title TEXT,
     start_date DATE,
     end_date DATE,
     FOREIGN KEY (head_lecturer_id) REFERENCES lecturer(lecturer_id),
@@ -69,101 +72,101 @@ CREATE TABLE research_project (
 );
 
 CREATE TABLE disciplinary_record (
-    record_id INT PRIMARY KEY,
-    student_id INT,
+    record_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER,
     incident_date DATE,
-    description VARCHAR(500),
-    action_taken VARCHAR(200),
+    description TEXT,
+    action_taken TEXT,
     FOREIGN KEY (student_id) REFERENCES student(student_id)
 );
 
 CREATE TABLE student_grade (
-    grade_id INT PRIMARY KEY,
-    student_id INT,
-    course_id INT,
-    assessment_type VARCHAR(50),
-    grade INT,
+    grade_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER,
+    course_id INTEGER,
+    assessment_type TEXT,
+    grade INTEGER,
     date_recorded DATE,
     FOREIGN KEY (student_id) REFERENCES student(student_id),
     FOREIGN KEY (course_id) REFERENCES course(course_id)
 );
 
 CREATE TABLE lecturer_qualification (
-    qualification_id INT PRIMARY KEY,
-    lecturer_id INT,
-    qualification_name VARCHAR,
-    institution VARCHAR(100),
-    year_awarded INT,
+    qualification_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lecturer_id INTEGER,
+    qualification_name TEXT,
+    institution TEXT,
+    year_awarded INTEGER,
     FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id)
 );
 
 CREATE TABLE lecturer_expertise (
-    expertise_id INT PRIMARY KEY,
-    lecturer_id INT,
-    area VARCHAR(100),
+    expertise_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lecturer_id INTEGER,
+    area TEXT,
     FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id)
 );
 
 CREATE TABLE lecturer_research_interest (
-    interest_id INT PRIMARY KEY,
-    lecturer_id INT,
-    interest VARCHAR(100),
+    interest_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lecturer_id INTEGER,
+    interest TEXT,
     FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id)
 );
 
 CREATE TABLE publication (
-    publication_id INT PRIMARY KEY,
-    lecturer_id INT,
-    title VARCHAR(300),
-    journal VARCHAR(200),
+    publication_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lecturer_id INTEGER,
+    title TEXT,
+    journal TEXT,
     publication_date DATE,
     FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id)
 );
 
 CREATE TABLE course_material (
-    material_id INT PRIMARY KEY,
-    course_id INT,
-    title VARCHAR(200),
-    material_type VARCHAR(50),
-    url VARCHAR(500),
+    material_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    course_id INTEGER,
+    title TEXT,
+    material_type TEXT,
+    url TEXT,
     FOREIGN KEY (course_id) REFERENCES course(course_id)
 );
 
 CREATE TABLE department_research_area (
-    area_id INT PRIMARY KEY,
-    dept_id INT,
-    area VARCHAR(100),
+    area_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dept_id INTEGER,
+    area TEXT,
     FOREIGN KEY (dept_id) REFERENCES department(dept_id)
 );
 
 CREATE TABLE project_funding (
-    funding_id INT PRIMARY KEY,
-    project_id INT,
-    source_name VARCHAR(100),
-    amount DECIMAL(12,2),
+    funding_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER,
+    source_name TEXT,
+    amount REAL,
     FOREIGN KEY (project_id) REFERENCES research_project(project_id)
 );
 
 CREATE TABLE project_publication (
-    project_pub_id INT PRIMARY KEY,
-    project_id INT,
-    title VARCHAR(300),
+    project_pub_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER,
+    title TEXT,
     publication_date DATE,
     FOREIGN KEY (project_id) REFERENCES research_project(project_id)
 );
 
 CREATE TABLE project_outcome (
-    outcome_id INT PRIMARY KEY,
-    project_id INT,
-    description VARCHAR(500),
+    outcome_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER,
+    description TEXT,
     outcome_date DATE,
     FOREIGN KEY (project_id) REFERENCES research_project(project_id)
 );
 
 CREATE TABLE student_course (
-    student_id INT,
-    course_id INT,
-    semester VARCHAR(20),
+    student_id INTEGER,
+    course_id INTEGER,
+    semester TEXT,
     enrolment_date DATE,
     PRIMARY KEY (student_id, course_id),
     FOREIGN KEY (student_id) REFERENCES student(student_id),
@@ -171,41 +174,41 @@ CREATE TABLE student_course (
 );
 
 CREATE TABLE lecturer_course (
-    lecturer_id INT,
-    course_id INT,
+    lecturer_id INTEGER,
+    course_id INTEGER,
     PRIMARY KEY (lecturer_id, course_id),
     FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id),
     FOREIGN KEY (course_id) REFERENCES course(course_id)
 );
 
 CREATE TABLE course_prerequisite (
-    course_id INT,
-    prerequisite_id INT,
+    course_id INTEGER,
+    prerequisite_id INTEGER,
     PRIMARY KEY (course_id, prerequisite_id),
     FOREIGN KEY (course_id) REFERENCES course(course_id),
     FOREIGN KEY (prerequisite_id) REFERENCES course(course_id)
 );
 
 CREATE TABLE program_course (
-    program_id INT,
-    course_id INT,
-    is_required BOOLEAN,
+    program_id INTEGER,
+    course_id INTEGER,
+    is_required INTEGER,
     PRIMARY KEY (program_id, course_id),
     FOREIGN KEY (program_id) REFERENCES program(program_id),
     FOREIGN KEY (course_id) REFERENCES course(course_id)
 );
 
 CREATE TABLE research_project_member (
-    group_id INT,
-    student_id INT,
+    group_id INTEGER,
+    student_id INTEGER,
     PRIMARY KEY (group_id, student_id),
     FOREIGN KEY (group_id) REFERENCES research_project(project_id),
     FOREIGN KEY (student_id) REFERENCES student(student_id)
 );
 
 CREATE TABLE project_member (
-    project_id INT,
-    student_id INT,
+    project_id INTEGER,
+    student_id INTEGER,
     PRIMARY KEY (project_id, student_id),
     FOREIGN KEY (project_id) REFERENCES research_project(project_id),
     FOREIGN KEY (student_id) REFERENCES student(student_id)
