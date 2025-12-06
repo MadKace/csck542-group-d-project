@@ -62,7 +62,7 @@ CREATE TABLE non_academic_staff (
 
 CREATE TABLE research_project (
     project_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    head_lecturer_id INTEGER,
+    head_lecturer_id INTEGER UNIQUE,
     dept_id INTEGER,
     title TEXT,
     start_date DATE,
@@ -205,3 +205,4 @@ CREATE TABLE research_project_member (
     FOREIGN KEY (project_id) REFERENCES research_project(project_id),
     FOREIGN KEY (student_id) REFERENCES student(student_id)
 );
+
