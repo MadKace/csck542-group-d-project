@@ -1,15 +1,6 @@
 
 from nicegui import ui
 
-ui.add_head_html('''
-    <style>
-        .my-red-button {
-            color: Crimson;
-            font-weight: bold;
-        }
-    </style>
-''')
-
 ui.add_css('''
     @layer utilities {
        .standard-btn {
@@ -17,41 +8,6 @@ ui.add_css('''
         }
     }
 ''')
-
-def student_menu():
-    ui.notify("Student")
-
-def lecturer_menu():
-    ui.notify("Lecturer")
-
-def nas_menu():
-    ui.notify("NAS")
-
-def course_menu():
-    ui.notify("Course")
-
-def department_menu():
-    ui.notify("Department")
-
-def rp_menu():
-    ui.notify("RP")
-
-def qr_menu():
-    ui.notify("Q&R")
-
-#with ui.row().classes('w-full justify-center items-center min-h-screen'):
-#    with ui.column().classes('items-center gap-4'):
-#        with ui.column().classes('w-full items-center gap-4'):
-#            ui.label('Record Management Service').classes('text-2xl font-bold')
-#            ui.label('Welcome to your institutional records management service').classes('text-2xl font-bold')
-
-#        ui.button("Students", on_click=student_menu()).classes('standard-btn')
-#        ui.button("Lecturers", on_click=lecturer_menu()).classes('standard-btn')
-#        ui.button("Non-Academic Staff", on_click=nas_menu()).classes('standard-btn')
-#        ui.button("Courses", on_click=course_menu()).classes('standard-btn')
-#        ui.button("Departments", on_click=department_menu()).classes('standard-btn')
-#        ui.button("Research Projects", on_click=rp_menu()).classes('standard-btn')
-#        ui.button("Queries and Reports", on_click=qr_menu()).classes('standard-btn')
 
 with ui.column().classes('w-full'):
     with ui.tabs().classes('w-full') as main_tabs:
