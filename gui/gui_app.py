@@ -9,11 +9,11 @@ ui.add_css('''
     }
 ''')
 
-def build_view_students():
-    tbl_view_students = [
-        'student_id', 'programme_id', 'advisor_id', 'name', 'date_of_birth', 'contact_info', 'year_of_study',
-        'graduation_status'
-    ]
+#def build_view_students():
+    #columns_view_students = [
+    #    'student_id', 'programme_id', 'advisor_id', 'name', 'date_of_birth', 'contact_info', 'year_of_study',
+    #    'graduation_status'
+    #]
 
 def build_view_lectures():
     tbl_view_lectures = [
@@ -53,7 +53,18 @@ with ui.column().classes('w-full'):
                 tab_students_manage = ui.tab('Manage Student Records')
             with ui.tab_panels(student_ops).classes('w-full'):
                 with ui.tab_panel(tab_students_view).classes('w-full'):
-                    inputs = {}
+                    columns_view_students = [
+                        'student_id', 'programme_id', 'advisor_id', 'name', 'date_of_birth', 'contact_info',
+                        'year_of_study',
+                        'graduation_status'
+                    ]
+                    tbl_students = ui.table(
+                        columns=[
+                            {'name': f, 'label': f, 'field': f} for f in columns_view_students],
+                        rows=[],
+                        row_key =  'student_id').classes(
+                        'w-full border border-black text-black bg-white'
+                    )
                 with ui.tab_panel(tab_students_view).classes('w-full'):
                     inputs1 = {}
     with ui.tab_panels(main_tabs, value = tab_lecturers).classes('w-full'):
