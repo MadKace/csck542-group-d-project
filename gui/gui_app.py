@@ -9,6 +9,32 @@ ui.add_css('''
     }
 ''')
 
+def build_view_students():
+    tbl_view_students = [
+        'student_id', 'programme_id', 'advisor_id', 'name', 'date_of_birth', 'contact_info', 'year_of_study',
+        'graduation_status'
+    ]
+
+def build_view_lectures():
+    tbl_view_lectures = [
+        'lecturer_id', 'dept_id', 'name', 'course_load'
+    ]
+
+def build_view_nas():
+    tbl_view_nas = [
+        'staff_id', 'dept_id', 'name', 'job_title', 'employment_type', 'contract_details', 'salary', 'emergency_contact'
+    ]
+
+def build_view_courses():
+    tbl_view_courses = [
+        'programme_id', 'course_id', 'is_required'
+    ]
+
+def build_view_department():
+    tbl_view_departments = [
+        'dept_id', 'name', 'faculty'
+    ]
+
 with ui.column().classes('w-full'):
     with ui.tabs().classes('w-full') as main_tabs:
         tab_students = ui.tab('Students')
