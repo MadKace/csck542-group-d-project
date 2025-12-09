@@ -5,6 +5,7 @@ from src.repositories.course_repository import CourseRepository
 from src.repositories.department_repository import DepartmentRepository
 from src.repositories.lecturer_repository import LecturerRepository
 from src.repositories.programme_repository import ProgrammeRepository
+from src.repositories.research_repository import ResearchProjectRepository
 from src.repositories.staff_repository import StaffRepository
 from src.repositories.student_repository import StudentRepository
 
@@ -55,3 +56,10 @@ class RepositoryFactory:
         if StaffRepository not in cls._instances:
             cls._instances[StaffRepository] = StaffRepository()
         return cls._instances[StaffRepository]
+
+    @classmethod
+    def get_research_project_repository(cls) -> ResearchProjectRepository:
+        """Get or create a ResearchProjectRepository instance."""
+        if ResearchProjectRepository not in cls._instances:
+            cls._instances[ResearchProjectRepository] = ResearchProjectRepository()
+        return cls._instances[ResearchProjectRepository]
