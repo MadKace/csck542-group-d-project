@@ -53,3 +53,12 @@ class DepartmentRepository(BaseRepository[Department]):
             ORDER BY d.name
         """
         return self._execute_query(query, (f"%{area}%",))
+
+    def search(self, name: str) -> list[Department]:
+        """Search departments by name."""
+        query = """
+            SELECT * FROM department
+            WHERE LOWER(name) LIKE LOWER(?)
+            ORDER BY name
+        """
+        return self._execute_query(query, (f"%{name}%",))

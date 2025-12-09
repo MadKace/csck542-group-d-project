@@ -102,3 +102,11 @@ class StudentRepository(BaseRepository[Student]):
         rows = self._connection.execute(query, (student_id,))
         return [Course.from_row(row) for row in rows]
 
+    def search(self, name: str) -> list[Student]:
+        """Search students by name."""
+        query = """
+            SELECT * FROM student
+            WHERE LOWER(name) LIKE LOWER(?)
+            ORDER BY name
+        """
+        return self._execute_query(query, (f"%{name}%",))

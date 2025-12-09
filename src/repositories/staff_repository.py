@@ -48,3 +48,12 @@ class StaffRepository(BaseRepository[NonAcademicStaff]):
             ORDER BY name
         """
         return self._execute_query(query, (employment_type,))
+
+    def search(self, name: str) -> list[NonAcademicStaff]:
+        """Search staff by name."""
+        query = """
+            SELECT * FROM non_academic_staff
+            WHERE LOWER(name) LIKE LOWER(?)
+            ORDER BY name
+        """
+        return self._execute_query(query, (f"%{name}%",))

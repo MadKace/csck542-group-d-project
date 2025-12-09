@@ -88,3 +88,14 @@ class CourseRepository(BaseRepository[Course]):
         """Get a course by its course code."""
         query = "SELECT * FROM course WHERE course_code = ?"
         return self._execute_query_one(query, (course_code,))
+
+    def search(self, term: str) -> list[Course]:
+        """Search courses by name or code."""
+        query = """
+            SELECT * FROM course
+            WHERE LOWER(name) LIKE LOWER(?)
+               OR LOWER(course_code) LIKE LOWER(?)
+            ORDER BY course_code
+        """
+        pattern = f"%{term}%"
+        return self._execute_query(query, (pattern, pattern))

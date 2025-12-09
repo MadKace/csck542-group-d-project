@@ -88,3 +88,11 @@ class LecturerRepository(BaseRepository[Lecturer]):
         rows = self._connection.execute(query, (lecturer_id,))
         return [LecturerResearchInterest.from_row(row) for row in rows]
 
+    def search(self, name: str) -> list[Lecturer]:
+        """Search lecturers by name."""
+        query = """
+            SELECT * FROM lecturer
+            WHERE LOWER(name) LIKE LOWER(?)
+            ORDER BY name
+        """
+        return self._execute_query(query, (f"%{name}%",))
