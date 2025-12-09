@@ -1,5 +1,5 @@
-"""Service layer for query orchestration."""
+"""Service layer for data access orchestration."""
 
-from src.services.query_service import QueryService
+from src.services.query_service import APIService
 
-__all__ = ["QueryService"]
+__all__ = ["APIService"]
