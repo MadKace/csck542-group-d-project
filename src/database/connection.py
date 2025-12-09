@@ -125,6 +125,19 @@ class DatabaseConnection:
                 cursor.execute(query)
             return cursor.fetchone()
 
+    def execute_write(
+        self,
+        query: str,
+        params: tuple[Any, ...] | dict[str, Any] | None = None,
+    ) -> int:
+        """Execute a write operation (INSERT/UPDATE/DELETE) and return lastrowid."""
+        with self.transaction() as cursor:
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+            return cursor.lastrowid or 0
+
     def close(self) -> None:
         """Close the database connection."""
         if self._connection is not None:

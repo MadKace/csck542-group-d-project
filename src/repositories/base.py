@@ -85,3 +85,47 @@ class BaseRepository(ABC, Generic[T]):
         if row is None:
             return None
         return self.model_class.from_row(row)
+
+    def create(self, **kwargs: Any) -> T:
+        """Create a new entity and return it with its generated ID."""
+        if not kwargs:
+            raise ValueError("No fields provided for create")
+
+        columns = ", ".join(kwargs.keys())
+        placeholders = ", ".join("?" for _ in kwargs)
+        values = tuple(kwargs.values())
+
+        query = f"INSERT INTO {self.table_name} ({columns}) VALUES ({placeholders})"
+        new_id = self._connection.execute_write(query, values)
+
+        return self.get_by_id(new_id)
+
+    def update(self, entity_id: int, **kwargs: Any) -> T:
+        """Update an existing entity and return it."""
+        if not kwargs:
+            raise ValueError("No fields provided for update")
+
+        if not self.exists(entity_id):
+            raise EntityNotFoundError(self.table_name, entity_id)
+
+        set_clause = ", ".join(f"{key} = ?" for key in kwargs)
+        values = tuple(kwargs.values()) + (entity_id,)
+
+        query = (
+            f"UPDATE {self.table_name} "
+            f"SET {set_clause} "
+            f"WHERE {self.primary_key} = ?"
+        )
+        self._connection.execute_write(query, values)
+
+        return self.get_by_id(entity_id)
+
+    def delete(self, entity_id: int) -> bool:
+        """Delete an entity by its primary key."""
+        if not self.exists(entity_id):
+            return False
+
+        query = f"DELETE FROM {self.table_name} WHERE {self.primary_key} = ?"
+        self._connection.execute_write(query, (entity_id,))
+
+        return True
