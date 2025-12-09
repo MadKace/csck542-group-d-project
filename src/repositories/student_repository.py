@@ -1,6 +1,5 @@
 """Student repository for database operations."""
 
-from src.models.course import Course
 from src.models.student import (
     DisciplinaryRecord,
     Student,
@@ -90,18 +89,6 @@ class StudentRepository(BaseRepository[Student]):
         """
         return self._execute_query(query, (course_id,))
 
-    def get_courses(self, student_id: int) -> list[Course]:
-        """Get all courses a student is enrolled in."""
-        query = """
-            SELECT c.*
-            FROM course c
-            INNER JOIN student_course sc ON c.course_id = sc.course_id
-            WHERE sc.student_id = ?
-            ORDER BY c.course_code
-        """
-        rows = self._connection.execute(query, (student_id,))
-        return [Course.from_row(row) for row in rows]
-
     def search(self, name: str) -> list[Student]:
         """Search students by name."""
         query = """
@@ -110,3 +97,15 @@ class StudentRepository(BaseRepository[Student]):
             ORDER BY name
         """
         return self._execute_query(query, (f"%{name}%",))
+
+    def get_by_research_project(self, project_id: int) -> list[Student]:
+        """Get all student members of a research project."""
+        query = """
+            SELECT s.*
+            FROM student s
+            INNER JOIN research_project_member rpm
+                ON s.student_id = rpm.student_id
+            WHERE rpm.project_id = ?
+            ORDER BY s.name
+        """
+        return self._execute_query(query, (project_id,))

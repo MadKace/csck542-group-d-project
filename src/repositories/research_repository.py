@@ -1,7 +1,6 @@
 """Research project repository for database operations."""
 
 from src.models.research import ProjectFunding, ProjectOutcome, ResearchProject
-from src.models.student import Student
 from src.repositories.base import BaseRepository
 
 
@@ -53,19 +52,6 @@ class ResearchProjectRepository(BaseRepository[ResearchProject]):
         """
         rows = self._connection.execute(query, (project_id,))
         return [ProjectOutcome.from_row(row) for row in rows]
-
-    def get_members(self, project_id: int) -> list[Student]:
-        """Get all student members of a project."""
-        query = """
-            SELECT s.*
-            FROM student s
-            INNER JOIN research_project_member rpm
-                ON s.student_id = rpm.student_id
-            WHERE rpm.project_id = ?
-            ORDER BY s.name
-        """
-        rows = self._connection.execute(query, (project_id,))
-        return [Student.from_row(row) for row in rows]
 
     # TODO: Check if "LIKE" is the best operator here
     def search(self, title: str) -> list[ResearchProject]:

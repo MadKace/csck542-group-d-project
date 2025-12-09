@@ -51,6 +51,42 @@ class CourseRepository(BaseRepository[Course]):
         """
         return self._execute_query(query, (lecturer_id,))
 
+    def get_by_student(self, student_id: int) -> list[Course]:
+        """Get all courses a student is enrolled in."""
+        query = """
+            SELECT c.*
+            FROM course c
+            INNER JOIN student_course sc ON c.course_id = sc.course_id
+            WHERE sc.student_id = ?
+            ORDER BY c.course_code
+        """
+        return self._execute_query(query, (student_id,))
+
+    def get_by_programme(
+        self,
+        programme_id: int,
+        required_only: bool = False,
+    ) -> list[Course]:
+        """Get all courses in a programme."""
+        if required_only:
+            query = """
+                SELECT c.*
+                FROM course c
+                INNER JOIN programme_course pc ON c.course_id = pc.course_id
+                WHERE pc.programme_id = ?
+                  AND pc.is_required = 1
+                ORDER BY c.course_code
+            """
+        else:
+            query = """
+                SELECT c.*
+                FROM course c
+                INNER JOIN programme_course pc ON c.course_id = pc.course_id
+                WHERE pc.programme_id = ?
+                ORDER BY c.course_code
+            """
+        return self._execute_query(query, (programme_id,))
+
     def get_materials(self, course_id: int) -> list[CourseMaterial]:
         """Get all materials for a course."""
         query = """
