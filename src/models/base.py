@@ -1,4 +1,4 @@
-"""Base model class for all domain entities."""
+"""Base model class for all entities."""
 
 import sqlite3
 from dataclasses import dataclass
@@ -10,7 +10,7 @@ T = TypeVar("T", bound="BaseModel")
 
 @dataclass
 class BaseModel:
-    """Base class for all domain model entities."""
+    """Base class for all model entities."""
 
     @classmethod
     def from_row(cls: type[T], row: sqlite3.Row | dict[str, Any]) -> T:
