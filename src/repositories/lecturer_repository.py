@@ -4,6 +4,7 @@ from src.models.lecturer import (
     Lecturer,
     LecturerExpertise,
     LecturerQualification,
+    LecturerResearchInterest,
     Publication,
 )
 from src.repositories.base import BaseRepository
@@ -73,3 +74,17 @@ class LecturerRepository(BaseRepository[Lecturer]):
         """
         rows = self._connection.execute(query, (lecturer_id,))
         return [Publication.from_row(row) for row in rows]
+
+    def get_research_interests(
+        self,
+        lecturer_id: int,
+    ) -> list[LecturerResearchInterest]:
+        """Get all research interests for a lecturer."""
+        query = """
+            SELECT * FROM lecturer_research_interest
+            WHERE lecturer_id = ?
+            ORDER BY interest
+        """
+        rows = self._connection.execute(query, (lecturer_id,))
+        return [LecturerResearchInterest.from_row(row) for row in rows]
+

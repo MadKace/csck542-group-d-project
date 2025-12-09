@@ -36,6 +36,15 @@ class LecturerExpertise(BaseModel):
 
 
 @dataclass
+class LecturerResearchInterest(BaseModel):
+    """Represents a research interest for a lecturer."""
+
+    interest_id: int
+    lecturer_id: int
+    interest: str
+
+
+@dataclass
 class Publication(BaseModel):
     """Represents a publication by a lecturer."""
 
