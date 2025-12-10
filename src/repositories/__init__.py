@@ -1,6 +1,7 @@
 """Repository layer for database access."""
 
 from src.repositories.base import BaseRepository
+from src.repositories.base_orm import BaseORMRepository
 from src.repositories.course_repository import CourseRepository
 from src.repositories.department_repository import DepartmentRepository
 from src.repositories.factory import RepositoryFactory
@@ -11,6 +12,7 @@ from src.repositories.staff_repository import StaffRepository
 from src.repositories.student_repository import StudentRepository
 
 __all__ = [
+    "BaseORMRepository",
     "BaseRepository",
     "CourseRepository",
     "DepartmentRepository",
