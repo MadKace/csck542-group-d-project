@@ -23,7 +23,7 @@ class Student(Base):
     name: Mapped[str] = mapped_column(String(100))
     date_of_birth: Mapped[str | None] = mapped_column(String(10))
     contact_info: Mapped[str | None] = mapped_column(String(200))
-    programme_id: Mapped[int | None] = mapped_column(ForeignKey("program.programme_id"))
+    programme_id: Mapped[int | None] = mapped_column(ForeignKey("programme.programme_id"))
     year_of_study: Mapped[int | None]
     graduation_status: Mapped[str | None] = mapped_column(String(20))
     advisor_id: Mapped[int | None] = mapped_column(ForeignKey("lecturer.lecturer_id"))

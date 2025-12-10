@@ -39,7 +39,7 @@ programme_course = Table(
     "programme_course",
     Base.metadata,
     Column(
-        "programme_id", Integer, ForeignKey("program.programme_id"), primary_key=True
+        "programme_id", Integer, ForeignKey("programme.programme_id"), primary_key=True
     ),
     Column("course_id", Integer, ForeignKey("course.course_id"), primary_key=True),
     Column("is_required", Integer, default=0),

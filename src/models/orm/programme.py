@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class Programme(Base):
     """Represents an academic programme."""
 
-    __tablename__ = "program"
+    __tablename__ = "programme"
 
     programme_id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100))
