@@ -60,3 +60,15 @@ class ConfigurationError(UniversityDBError):
 
     def __init__(self, message: str = "Configuration error") -> None:
         super().__init__(message)
+
+
+class IntegrityError(UniversityDBError):
+    """Raised when a database integrity constraint is violated."""
+
+    def __init__(
+        self,
+        message: str = "Integrity constraint violated",
+        original_error: Exception | None = None,
+    ) -> None:
+        self.original_error = original_error
+        super().__init__(message)

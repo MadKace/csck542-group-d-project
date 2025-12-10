@@ -4,10 +4,12 @@ from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError as SAIntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from src.database import get_session
-from src.exceptions import EntityNotFoundError
+from src.exceptions import DatabaseError, EntityNotFoundError, IntegrityError
 from src.models.orm.base import Base
 
 T = TypeVar("T", bound=Base)
@@ -57,11 +59,18 @@ class BaseORMRepository(ABC, Generic[T]):
         if not kwargs:
             raise ValueError("No fields provided for create")
 
-        entity = self.model_class(**kwargs)
-        self._session.add(entity)
-        self._session.flush()
-        self._session.refresh(entity)
-        return entity
+        try:
+            entity = self.model_class(**kwargs)
+            self._session.add(entity)
+            self._session.flush()
+            self._session.refresh(entity)
+            return entity
+        except SAIntegrityError as e:
+            self._session.rollback()
+            raise IntegrityError(str(e.orig), e) from e
+        except SQLAlchemyError as e:
+            self._session.rollback()
+            raise DatabaseError(str(e), e) from e
 
     def update(self, entity_id: int, **kwargs: Any) -> T:
         """Update an existing entity and return it."""
@@ -72,12 +81,19 @@ class BaseORMRepository(ABC, Generic[T]):
         if entity is None:
             raise EntityNotFoundError(self.model_class.__tablename__, entity_id)
 
-        for key, value in kwargs.items():
-            setattr(entity, key, value)
+        try:
+            for key, value in kwargs.items():
+                setattr(entity, key, value)
 
-        self._session.flush()
-        self._session.refresh(entity)
-        return entity
+            self._session.flush()
+            self._session.refresh(entity)
+            return entity
+        except SAIntegrityError as e:
+            self._session.rollback()
+            raise IntegrityError(str(e.orig), e) from e
+        except SQLAlchemyError as e:
+            self._session.rollback()
+            raise DatabaseError(str(e), e) from e
 
     def delete(self, entity_id: int) -> bool:
         """Delete an entity by its primary key."""
@@ -85,9 +101,16 @@ class BaseORMRepository(ABC, Generic[T]):
         if entity is None:
             return False
 
-        self._session.delete(entity)
-        self._session.flush()
-        return True
+        try:
+            self._session.delete(entity)
+            self._session.flush()
+            return True
+        except SAIntegrityError as e:
+            self._session.rollback()
+            raise IntegrityError(str(e.orig), e) from e
+        except SQLAlchemyError as e:
+            self._session.rollback()
+            raise DatabaseError(str(e), e) from e
 
     def commit(self) -> None:
         """Commit the current transaction."""
