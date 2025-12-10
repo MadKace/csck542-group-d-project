@@ -26,13 +26,7 @@ def _get_default_db_path() -> Path:
 
 @dataclass
 class Settings:
-    """Application configuration settings.
-
-    Attributes:
-        database_path: Path to the SQLite database file.
-        foreign_keys_enabled: Whether to enforce foreign keys.
-        echo_sql: Whether to log SQL queries (for debugging).
-    """
+    """Application configuration settings."""
 
     database_path: Path = field(default_factory=_get_default_db_path)
     foreign_keys_enabled: bool = True
@@ -47,15 +41,13 @@ class Settings:
             cls._instance = cls()
         return cls._instance
 
+    @property
+    def database_url(self) -> str:
+        """Return SQLAlchemy-compatible database URL."""
+        return f"sqlite:///{self.database_path}"
+
     def validate(self) -> bool:
-        """Validate the configuration settings.
-
-        Returns:
-            True if all settings are valid.
-
-        Raises:
-            ConfigurationError: If any setting is invalid.
-        """
+        """Validate the configuration settings."""
         if not self.database_path.parent.exists():
             raise ConfigurationError(
                 f"Database directory does not exist: {self.database_path.parent}"
