@@ -138,6 +138,19 @@ class DatabaseConnection:
                 cursor.execute(query)
             return cursor.lastrowid or 0
 
+    def execute_delete(
+        self,
+        query: str,
+        params: tuple[Any, ...] | dict[str, Any] | None = None,
+    ) -> int:
+        """Execute a DELETE operation and return number of rows affected."""
+        with self.transaction() as cursor:
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+            return cursor.rowcount
+
     def close(self) -> None:
         """Close the database connection."""
         if self._connection is not None:

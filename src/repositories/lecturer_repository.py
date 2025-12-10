@@ -1,5 +1,6 @@
 """Lecturer repository for database operations."""
 
+from src.exceptions import DatabaseError
 from src.models.lecturer import (
     Lecturer,
     LecturerExpertise,
@@ -101,10 +102,11 @@ class LecturerRepository(BaseRepository[Lecturer]):
 
     # Create / Update / Delete
 
-    def assign_to_course(self, lecturer_id: int, course_id: int) -> None:
+    def assign_to_course(self, lecturer_id: int, course_id: int) -> bool:
         """Assign a lecturer to teach a course."""
         query = "INSERT INTO lecturer_course (lecturer_id, course_id) VALUES (?, ?)"
         self._connection.execute_write(query, (lecturer_id, course_id))
+        return True
 
     def unassign_from_course(self, lecturer_id: int, course_id: int) -> bool:
         """Remove a lecturer from a course."""
@@ -112,8 +114,10 @@ class LecturerRepository(BaseRepository[Lecturer]):
             "DELETE FROM lecturer_course "
             "WHERE lecturer_id = ? AND course_id = ?"
         )
-        self._connection.execute_write(query, (lecturer_id, course_id))
-        return True
+        rows_affected = self._connection.execute_delete(
+            query, (lecturer_id, course_id)
+        )
+        return rows_affected > 0
 
     def add_qualification(
         self,
@@ -135,6 +139,8 @@ class LecturerRepository(BaseRepository[Lecturer]):
             "SELECT * FROM lecturer_qualification WHERE qualification_id = ?",
             (new_id,),
         )
+        if row is None:
+            raise DatabaseError("Failed to retrieve created qualification")
         return LecturerQualification.from_row(row)
 
     def add_expertise(self, lecturer_id: int, area: str) -> LecturerExpertise:
@@ -144,6 +150,8 @@ class LecturerRepository(BaseRepository[Lecturer]):
         row = self._connection.execute_one(
             "SELECT * FROM lecturer_expertise WHERE expertise_id = ?", (new_id,)
         )
+        if row is None:
+            raise DatabaseError("Failed to retrieve created expertise")
         return LecturerExpertise.from_row(row)
 
     def add_publication(
@@ -164,6 +172,8 @@ class LecturerRepository(BaseRepository[Lecturer]):
         row = self._connection.execute_one(
             "SELECT * FROM publication WHERE publication_id = ?", (new_id,)
         )
+        if row is None:
+            raise DatabaseError("Failed to retrieve created publication")
         return Publication.from_row(row)
 
     def add_research_interest(
@@ -181,4 +191,6 @@ class LecturerRepository(BaseRepository[Lecturer]):
             "SELECT * FROM lecturer_research_interest WHERE interest_id = ?",
             (new_id,),
         )
+        if row is None:
+            raise DatabaseError("Failed to retrieve created research interest")
         return LecturerResearchInterest.from_row(row)

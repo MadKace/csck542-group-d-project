@@ -1,5 +1,6 @@
 """Student repository for database operations."""
 
+from src.exceptions import DatabaseError
 from src.models.student import (
     DisciplinaryRecord,
     Student,
@@ -114,16 +115,17 @@ class StudentRepository(BaseRepository[Student]):
 
     # Create / Update / Delete
 
-    def enrol_in_course(self, student_id: int, course_id: int) -> None:
+    def enrol_in_course(self, student_id: int, course_id: int) -> bool:
         """Enrol a student in a course."""
         query = "INSERT INTO student_course (student_id, course_id) VALUES (?, ?)"
         self._connection.execute_write(query, (student_id, course_id))
+        return True
 
     def unenrol_from_course(self, student_id: int, course_id: int) -> bool:
         """Remove a student from a course."""
         query = "DELETE FROM student_course WHERE student_id = ? AND course_id = ?"
-        self._connection.execute_write(query, (student_id, course_id))
-        return True
+        rows_affected = self._connection.execute_delete(query, (student_id, course_id))
+        return rows_affected > 0
 
     def add_grade(
         self,
@@ -145,6 +147,8 @@ class StudentRepository(BaseRepository[Student]):
         row = self._connection.execute_one(
             "SELECT * FROM student_grade WHERE grade_id = ?", (new_id,)
         )
+        if row is None:
+            raise DatabaseError("Failed to retrieve created grade record")
         return StudentGrade.from_row(row)
 
     def add_disciplinary_record(
@@ -166,4 +170,6 @@ class StudentRepository(BaseRepository[Student]):
         row = self._connection.execute_one(
             "SELECT * FROM disciplinary_record WHERE record_id = ?", (new_id,)
         )
+        if row is None:
+            raise DatabaseError("Failed to retrieve created disciplinary record")
         return DisciplinaryRecord.from_row(row)

@@ -70,10 +70,10 @@ deleted = api.student_repo.delete(student.student_id)
 | `get_grades(student_id: int)` | `list[StudentGrade]` | All grades for a student. |
 | `get_disciplinary_records(student_id: int)` | `list[DisciplinaryRecord]` | Disciplinary records for a student. |
 | `search(name: str)` | `list[Student]` | Search by name (case-insensitive, partial match). |
-| `enrol_in_course(student_id, course_id)` | `None` | Enrol student in a course. |
-| `unenrol_from_course(student_id, course_id)` | `bool` | Remove student from a course. |
-| `add_grade(student_id, course_id, ...)` | `StudentGrade` | Add a grade record. |
-| `add_disciplinary_record(student_id, ...)` | `DisciplinaryRecord` | Add a disciplinary record. |
+| `enrol_in_course(student_id, course_id)` | `bool` | Enrol student in a course. Returns `True` on success. |
+| `unenrol_from_course(student_id, course_id)` | `bool` | Remove student from a course. Returns `False` if not enrolled. |
+| `add_grade(student_id, course_id, ...)` | `StudentGrade` | Add a grade record. Raises `DatabaseError` on failure. |
+| `add_disciplinary_record(student_id, ...)` | `DisciplinaryRecord` | Add a disciplinary record. Raises `DatabaseError` on failure. |
 
 ---
 
@@ -90,12 +90,12 @@ deleted = api.student_repo.delete(student.student_id)
 | `get_publications(lecturer_id: int)` | `list[Publication]` | Publications by a lecturer. |
 | `get_research_interests(lecturer_id: int)` | `list[LecturerResearchInterest]` | Research interests for a lecturer. |
 | `search(name: str)` | `list[Lecturer]` | Search by name (case-insensitive, partial match). |
-| `assign_to_course(lecturer_id, course_id)` | `None` | Assign lecturer to teach a course. |
-| `unassign_from_course(lecturer_id, course_id)` | `bool` | Remove lecturer from a course. |
-| `add_qualification(lecturer_id, qualification_name, ...)` | `LecturerQualification` | Add a qualification. |
-| `add_expertise(lecturer_id, area)` | `LecturerExpertise` | Add an expertise area. |
-| `add_publication(lecturer_id, title, ...)` | `Publication` | Add a publication. |
-| `add_research_interest(lecturer_id, interest)` | `LecturerResearchInterest` | Add a research interest. |
+| `assign_to_course(lecturer_id, course_id)` | `bool` | Assign lecturer to teach a course. Returns `True` on success. |
+| `unassign_from_course(lecturer_id, course_id)` | `bool` | Remove lecturer from a course. Returns `False` if not assigned. |
+| `add_qualification(lecturer_id, qualification_name, ...)` | `LecturerQualification` | Add a qualification. Raises `DatabaseError` on failure. |
+| `add_expertise(lecturer_id, area)` | `LecturerExpertise` | Add an expertise area. Raises `DatabaseError` on failure. |
+| `add_publication(lecturer_id, title, ...)` | `Publication` | Add a publication. Raises `DatabaseError` on failure. |
+| `add_research_interest(lecturer_id, interest)` | `LecturerResearchInterest` | Add a research interest. Raises `DatabaseError` on failure. |
 
 ---
 
@@ -115,11 +115,11 @@ deleted = api.student_repo.delete(student.student_id)
 | `get_prerequisites(course_id: int)` | `list[Course]` | Prerequisite courses. |
 | `get_materials(course_id: int)` | `list[CourseMaterial]` | Materials for a course. |
 | `search(term: str)` | `list[Course]` | Search by name or code (case-insensitive, partial match). |
-| `add_prerequisite(course_id, prerequisite_id)` | `None` | Add a prerequisite to a course. |
-| `remove_prerequisite(course_id, prerequisite_id)` | `bool` | Remove a prerequisite from a course. |
-| `add_to_programme(course_id, programme_id, is_required=False)` | `None` | Add course to a programme. |
-| `remove_from_programme(course_id, programme_id)` | `bool` | Remove course from a programme. |
-| `add_material(course_id, title, ...)` | `CourseMaterial` | Add a material to a course. |
+| `add_prerequisite(course_id, prerequisite_id)` | `bool` | Add a prerequisite to a course. Returns `True` on success. |
+| `remove_prerequisite(course_id, prerequisite_id)` | `bool` | Remove a prerequisite from a course. Returns `False` if not found. |
+| `add_to_programme(course_id, programme_id, is_required=False)` | `bool` | Add course to a programme. Returns `True` on success. |
+| `remove_from_programme(course_id, programme_id)` | `bool` | Remove course from a programme. Returns `False` if not found. |
+| `add_material(course_id, title, ...)` | `CourseMaterial` | Add a material to a course. Raises `DatabaseError` on failure. |
 
 ---
 
@@ -134,7 +134,7 @@ deleted = api.student_repo.delete(student.student_id)
 | `get_research_areas(dept_id: int)` | `list[ResearchArea]` | Research areas for a department. |
 | `get_departments_with_research_area(area: str)` | `list[Department]` | Departments with matching research area (partial match). |
 | `search(name: str)` | `list[Department]` | Search by name (case-insensitive, partial match). |
-| `add_research_area(dept_id, area)` | `ResearchArea` | Add a research area to a department. |
+| `add_research_area(dept_id, area)` | `ResearchArea` | Add a research area to a department. Raises `DatabaseError` on failure. |
 
 ---
 
@@ -173,10 +173,10 @@ deleted = api.student_repo.delete(student.student_id)
 | `get_funding(project_id: int)` | `list[ProjectFunding]` | Funding sources for a project. |
 | `get_outcomes(project_id: int)` | `list[ProjectOutcome]` | Outcomes for a project. |
 | `search(title: str)` | `list[ResearchProject]` | Search by title (case-insensitive, partial match). |
-| `add_member(project_id, student_id)` | `None` | Add a student member to a project. |
-| `remove_member(project_id, student_id)` | `bool` | Remove a student member from a project. |
-| `add_funding(project_id, source_name, ...)` | `ProjectFunding` | Add a funding source. |
-| `add_outcome(project_id, description, ...)` | `ProjectOutcome` | Add an outcome. |
+| `add_member(project_id, student_id)` | `bool` | Add a student member to a project. Returns `True` on success. |
+| `remove_member(project_id, student_id)` | `bool` | Remove a student member from a project. Returns `False` if not found. |
+| `add_funding(project_id, source_name, ...)` | `ProjectFunding` | Add a funding source. Raises `DatabaseError` on failure. |
+| `add_outcome(project_id, description, ...)` | `ProjectOutcome` | Add an outcome. Raises `DatabaseError` on failure. |
 
 ---
 
@@ -341,5 +341,18 @@ deleted = api.student_repo.delete(student.student_id)
 
 | Exception | When Raised |
 |-----------|-------------|
-| `EntityNotFoundError` | `get_by_id()` called with non-existent ID |
-| `DatabaseConnectionError` | Database connection fails |
+| `EntityNotFoundError` | `get_by_id()` or `update()` called with non-existent ID. |
+| `DatabaseError` | Database connection fails, or failed to retrieve record after INSERT. |
+| `ValidationError` | Data validation fails (e.g., missing required fields in `create()`). |
+| `ConfigurationError` | Configuration-related errors. |
+
+All exceptions inherit from `UniversityDBError`, allowing a single catch-all:
+
+```python
+from src.exceptions import UniversityDBError
+
+try:
+    student = api.student_repo.get_by_id(999)
+except UniversityDBError as e:
+    print(f"Error: {e.message}")
+```

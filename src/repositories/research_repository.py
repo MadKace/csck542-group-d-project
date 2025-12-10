@@ -1,5 +1,6 @@
 """Research project repository for database operations."""
 
+from src.exceptions import DatabaseError
 from src.models.research import ProjectFunding, ProjectOutcome, ResearchProject
 from src.repositories.base import BaseRepository
 
@@ -66,13 +67,14 @@ class ResearchProjectRepository(BaseRepository[ResearchProject]):
 
     # Create / Update / Delete
 
-    def add_member(self, project_id: int, student_id: int) -> None:
+    def add_member(self, project_id: int, student_id: int) -> bool:
         """Add a student member to a research project."""
         query = """
             INSERT INTO research_project_member (project_id, student_id)
             VALUES (?, ?)
         """
         self._connection.execute_write(query, (project_id, student_id))
+        return True
 
     def remove_member(self, project_id: int, student_id: int) -> bool:
         """Remove a student member from a research project."""
@@ -80,8 +82,10 @@ class ResearchProjectRepository(BaseRepository[ResearchProject]):
             DELETE FROM research_project_member
             WHERE project_id = ? AND student_id = ?
         """
-        self._connection.execute_write(query, (project_id, student_id))
-        return True
+        rows_affected = self._connection.execute_delete(
+            query, (project_id, student_id)
+        )
+        return rows_affected > 0
 
     def add_funding(
         self,
@@ -100,6 +104,8 @@ class ResearchProjectRepository(BaseRepository[ResearchProject]):
         row = self._connection.execute_one(
             "SELECT * FROM project_funding WHERE funding_id = ?", (new_id,)
         )
+        if row is None:
+            raise DatabaseError("Failed to retrieve created funding record")
         return ProjectFunding.from_row(row)
 
     def add_outcome(
@@ -119,4 +125,6 @@ class ResearchProjectRepository(BaseRepository[ResearchProject]):
         row = self._connection.execute_one(
             "SELECT * FROM project_outcome WHERE outcome_id = ?", (new_id,)
         )
+        if row is None:
+            raise DatabaseError("Failed to retrieve created outcome record")
         return ProjectOutcome.from_row(row)

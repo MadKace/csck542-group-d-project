@@ -1,5 +1,6 @@
 """Course repository for database operations."""
 
+from src.exceptions import DatabaseError
 from src.models.course import Course, CourseMaterial
 from src.repositories.base import BaseRepository
 
@@ -140,13 +141,14 @@ class CourseRepository(BaseRepository[Course]):
 
     # Create / Update / Delete
 
-    def add_prerequisite(self, course_id: int, prerequisite_id: int) -> None:
+    def add_prerequisite(self, course_id: int, prerequisite_id: int) -> bool:
         """Add a prerequisite to a course."""
         query = """
             INSERT INTO course_prerequisite (course_id, prerequisite_id)
             VALUES (?, ?)
         """
         self._connection.execute_write(query, (course_id, prerequisite_id))
+        return True
 
     def remove_prerequisite(self, course_id: int, prerequisite_id: int) -> bool:
         """Remove a prerequisite from a course."""
@@ -154,15 +156,17 @@ class CourseRepository(BaseRepository[Course]):
             DELETE FROM course_prerequisite
             WHERE course_id = ? AND prerequisite_id = ?
         """
-        self._connection.execute_write(query, (course_id, prerequisite_id))
-        return True
+        rows_affected = self._connection.execute_delete(
+            query, (course_id, prerequisite_id)
+        )
+        return rows_affected > 0
 
     def add_to_programme(
         self,
         course_id: int,
         programme_id: int,
         is_required: bool = False,
-    ) -> None:
+    ) -> bool:
         """Add a course to a programme."""
         query = """
             INSERT INTO programme_course (programme_id, course_id, is_required)
@@ -171,6 +175,7 @@ class CourseRepository(BaseRepository[Course]):
         self._connection.execute_write(
             query, (programme_id, course_id, 1 if is_required else 0)
         )
+        return True
 
     def remove_from_programme(self, course_id: int, programme_id: int) -> bool:
         """Remove a course from a programme."""
@@ -178,8 +183,10 @@ class CourseRepository(BaseRepository[Course]):
             DELETE FROM programme_course
             WHERE programme_id = ? AND course_id = ?
         """
-        self._connection.execute_write(query, (programme_id, course_id))
-        return True
+        rows_affected = self._connection.execute_delete(
+            query, (programme_id, course_id)
+        )
+        return rows_affected > 0
 
     def add_material(
         self,
@@ -199,4 +206,6 @@ class CourseRepository(BaseRepository[Course]):
         row = self._connection.execute_one(
             "SELECT * FROM course_material WHERE material_id = ?", (new_id,)
         )
+        if row is None:
+            raise DatabaseError("Failed to retrieve created course material")
         return CourseMaterial.from_row(row)

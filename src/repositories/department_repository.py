@@ -1,5 +1,6 @@
 """Department repository for database operations."""
 
+from src.exceptions import DatabaseError
 from src.models.department import Department, ResearchArea
 from src.repositories.base import BaseRepository
 
@@ -77,4 +78,6 @@ class DepartmentRepository(BaseRepository[Department]):
         row = self._connection.execute_one(
             "SELECT * FROM department_research_area WHERE area_id = ?", (new_id,)
         )
+        if row is None:
+            raise DatabaseError("Failed to retrieve created research area")
         return ResearchArea.from_row(row)
