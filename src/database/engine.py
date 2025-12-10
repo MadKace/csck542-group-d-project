@@ -1,5 +1,8 @@
 """SQLAlchemy engine and session management."""
 
+from contextlib import contextmanager
+from typing import Generator
+
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -48,3 +51,17 @@ def get_session_factory() -> sessionmaker[Session]:
 def get_session() -> Session:
     """Create a new database session."""
     return get_session_factory()()
+
+
+@contextmanager
+def session_scope() -> Generator[Session, None, None]:
+    """Provide a transactional scope around a series of operations."""
+    session = get_session()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
