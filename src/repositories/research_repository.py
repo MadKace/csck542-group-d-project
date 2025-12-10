@@ -19,6 +19,8 @@ class ResearchProjectRepository(BaseRepository[ResearchProject]):
     def primary_key(self) -> str:
         return "project_id"
 
+    # Read
+
     def get_by_department(self, dept_id: int) -> list[ResearchProject]:
         """Get all research projects in a department."""
         query = """
@@ -53,7 +55,6 @@ class ResearchProjectRepository(BaseRepository[ResearchProject]):
         rows = self._connection.execute(query, (project_id,))
         return [ProjectOutcome.from_row(row) for row in rows]
 
-    # TODO: Check if "LIKE" is the best operator here
     def search(self, title: str) -> list[ResearchProject]:
         """Search projects by title."""
         query = """
@@ -62,3 +63,60 @@ class ResearchProjectRepository(BaseRepository[ResearchProject]):
             ORDER BY title
         """
         return self._execute_query(query, (f"%{title}%",))
+
+    # Create / Update / Delete
+
+    def add_member(self, project_id: int, student_id: int) -> None:
+        """Add a student member to a research project."""
+        query = """
+            INSERT INTO research_project_member (project_id, student_id)
+            VALUES (?, ?)
+        """
+        self._connection.execute_write(query, (project_id, student_id))
+
+    def remove_member(self, project_id: int, student_id: int) -> bool:
+        """Remove a student member from a research project."""
+        query = """
+            DELETE FROM research_project_member
+            WHERE project_id = ? AND student_id = ?
+        """
+        self._connection.execute_write(query, (project_id, student_id))
+        return True
+
+    def add_funding(
+        self,
+        project_id: int,
+        source_name: str,
+        amount: float | None = None,
+    ) -> ProjectFunding:
+        """Add a funding source to a project."""
+        query = """
+            INSERT INTO project_funding (project_id, source_name, amount)
+            VALUES (?, ?, ?)
+        """
+        new_id = self._connection.execute_write(
+            query, (project_id, source_name, amount)
+        )
+        row = self._connection.execute_one(
+            "SELECT * FROM project_funding WHERE funding_id = ?", (new_id,)
+        )
+        return ProjectFunding.from_row(row)
+
+    def add_outcome(
+        self,
+        project_id: int,
+        description: str,
+        outcome_date: str | None = None,
+    ) -> ProjectOutcome:
+        """Add an outcome to a project."""
+        query = """
+            INSERT INTO project_outcome (project_id, description, outcome_date)
+            VALUES (?, ?, ?)
+        """
+        new_id = self._connection.execute_write(
+            query, (project_id, description, outcome_date)
+        )
+        row = self._connection.execute_one(
+            "SELECT * FROM project_outcome WHERE outcome_id = ?", (new_id,)
+        )
+        return ProjectOutcome.from_row(row)

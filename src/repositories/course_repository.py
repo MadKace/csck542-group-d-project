@@ -19,6 +19,8 @@ class CourseRepository(BaseRepository[Course]):
     def primary_key(self) -> str:
         return "course_id"
 
+    # Read
+
     def get_by_department(self, dept_id: int) -> list[Course]:
         """Get all courses offered by a department."""
         query = """
@@ -135,3 +137,66 @@ class CourseRepository(BaseRepository[Course]):
         """
         pattern = f"%{term}%"
         return self._execute_query(query, (pattern, pattern))
+
+    # Create / Update / Delete
+
+    def add_prerequisite(self, course_id: int, prerequisite_id: int) -> None:
+        """Add a prerequisite to a course."""
+        query = """
+            INSERT INTO course_prerequisite (course_id, prerequisite_id)
+            VALUES (?, ?)
+        """
+        self._connection.execute_write(query, (course_id, prerequisite_id))
+
+    def remove_prerequisite(self, course_id: int, prerequisite_id: int) -> bool:
+        """Remove a prerequisite from a course."""
+        query = """
+            DELETE FROM course_prerequisite
+            WHERE course_id = ? AND prerequisite_id = ?
+        """
+        self._connection.execute_write(query, (course_id, prerequisite_id))
+        return True
+
+    def add_to_programme(
+        self,
+        course_id: int,
+        programme_id: int,
+        is_required: bool = False,
+    ) -> None:
+        """Add a course to a programme."""
+        query = """
+            INSERT INTO programme_course (programme_id, course_id, is_required)
+            VALUES (?, ?, ?)
+        """
+        self._connection.execute_write(
+            query, (programme_id, course_id, 1 if is_required else 0)
+        )
+
+    def remove_from_programme(self, course_id: int, programme_id: int) -> bool:
+        """Remove a course from a programme."""
+        query = """
+            DELETE FROM programme_course
+            WHERE programme_id = ? AND course_id = ?
+        """
+        self._connection.execute_write(query, (programme_id, course_id))
+        return True
+
+    def add_material(
+        self,
+        course_id: int,
+        title: str,
+        material_type: str | None = None,
+        url: str | None = None,
+    ) -> CourseMaterial:
+        """Add a material to a course."""
+        query = """
+            INSERT INTO course_material (course_id, title, material_type, url)
+            VALUES (?, ?, ?, ?)
+        """
+        new_id = self._connection.execute_write(
+            query, (course_id, title, material_type, url)
+        )
+        row = self._connection.execute_one(
+            "SELECT * FROM course_material WHERE material_id = ?", (new_id,)
+        )
+        return CourseMaterial.from_row(row)

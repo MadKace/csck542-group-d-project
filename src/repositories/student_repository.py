@@ -23,6 +23,8 @@ class StudentRepository(BaseRepository[Student]):
     def primary_key(self) -> str:
         return "student_id"
 
+    # Read
+
     def get_by_advisor(self, lecturer_id: int) -> list[Student]:
         """Get all students advised by a lecturer."""
         query = """
@@ -109,3 +111,59 @@ class StudentRepository(BaseRepository[Student]):
             ORDER BY s.name
         """
         return self._execute_query(query, (project_id,))
+
+    # Create / Update / Delete
+
+    def enrol_in_course(self, student_id: int, course_id: int) -> None:
+        """Enrol a student in a course."""
+        query = "INSERT INTO student_course (student_id, course_id) VALUES (?, ?)"
+        self._connection.execute_write(query, (student_id, course_id))
+
+    def unenrol_from_course(self, student_id: int, course_id: int) -> bool:
+        """Remove a student from a course."""
+        query = "DELETE FROM student_course WHERE student_id = ? AND course_id = ?"
+        self._connection.execute_write(query, (student_id, course_id))
+        return True
+
+    def add_grade(
+        self,
+        student_id: int,
+        course_id: int,
+        assessment_type: str | None = None,
+        grade: int | None = None,
+        date_recorded: str | None = None,
+    ) -> StudentGrade:
+        """Add a grade record for a student."""
+        query = """
+            INSERT INTO student_grade
+                (student_id, course_id, assessment_type, grade, date_recorded)
+            VALUES (?, ?, ?, ?, ?)
+        """
+        new_id = self._connection.execute_write(
+            query, (student_id, course_id, assessment_type, grade, date_recorded)
+        )
+        row = self._connection.execute_one(
+            "SELECT * FROM student_grade WHERE grade_id = ?", (new_id,)
+        )
+        return StudentGrade.from_row(row)
+
+    def add_disciplinary_record(
+        self,
+        student_id: int,
+        incident_date: str | None = None,
+        description: str | None = None,
+        action_taken: str | None = None,
+    ) -> DisciplinaryRecord:
+        """Add a disciplinary record for a student."""
+        query = """
+            INSERT INTO disciplinary_record
+                (student_id, incident_date, description, action_taken)
+            VALUES (?, ?, ?, ?)
+        """
+        new_id = self._connection.execute_write(
+            query, (student_id, incident_date, description, action_taken)
+        )
+        row = self._connection.execute_one(
+            "SELECT * FROM disciplinary_record WHERE record_id = ?", (new_id,)
+        )
+        return DisciplinaryRecord.from_row(row)

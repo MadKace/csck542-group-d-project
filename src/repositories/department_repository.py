@@ -19,6 +19,8 @@ class DepartmentRepository(BaseRepository[Department]):
     def primary_key(self) -> str:
         return "dept_id"
 
+    # Read
+
     def get_by_name(self, name: str) -> Department | None:
         """Get a department by its name."""
         query = "SELECT * FROM department WHERE name = ?"
@@ -62,3 +64,17 @@ class DepartmentRepository(BaseRepository[Department]):
             ORDER BY name
         """
         return self._execute_query(query, (f"%{name}%",))
+
+    # Create / Update / Delete
+
+    def add_research_area(self, dept_id: int, area: str) -> ResearchArea:
+        """Add a research area to a department."""
+        query = """
+            INSERT INTO department_research_area (dept_id, area)
+            VALUES (?, ?)
+        """
+        new_id = self._connection.execute_write(query, (dept_id, area))
+        row = self._connection.execute_one(
+            "SELECT * FROM department_research_area WHERE area_id = ?", (new_id,)
+        )
+        return ResearchArea.from_row(row)

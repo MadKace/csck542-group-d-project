@@ -25,6 +25,8 @@ class LecturerRepository(BaseRepository[Lecturer]):
     def primary_key(self) -> str:
         return "lecturer_id"
 
+    # Read
+
     def get_by_expertise(self, area: str) -> list[Lecturer]:
         """Get lecturers with expertise in a specific area."""
         query = """
@@ -96,3 +98,87 @@ class LecturerRepository(BaseRepository[Lecturer]):
             ORDER BY name
         """
         return self._execute_query(query, (f"%{name}%",))
+
+    # Create / Update / Delete
+
+    def assign_to_course(self, lecturer_id: int, course_id: int) -> None:
+        """Assign a lecturer to teach a course."""
+        query = "INSERT INTO lecturer_course (lecturer_id, course_id) VALUES (?, ?)"
+        self._connection.execute_write(query, (lecturer_id, course_id))
+
+    def unassign_from_course(self, lecturer_id: int, course_id: int) -> bool:
+        """Remove a lecturer from a course."""
+        query = (
+            "DELETE FROM lecturer_course "
+            "WHERE lecturer_id = ? AND course_id = ?"
+        )
+        self._connection.execute_write(query, (lecturer_id, course_id))
+        return True
+
+    def add_qualification(
+        self,
+        lecturer_id: int,
+        qualification_name: str,
+        institution: str | None = None,
+        year_awarded: int | None = None,
+    ) -> LecturerQualification:
+        """Add a qualification for a lecturer."""
+        query = """
+            INSERT INTO lecturer_qualification
+                (lecturer_id, qualification_name, institution, year_awarded)
+            VALUES (?, ?, ?, ?)
+        """
+        new_id = self._connection.execute_write(
+            query, (lecturer_id, qualification_name, institution, year_awarded)
+        )
+        row = self._connection.execute_one(
+            "SELECT * FROM lecturer_qualification WHERE qualification_id = ?",
+            (new_id,),
+        )
+        return LecturerQualification.from_row(row)
+
+    def add_expertise(self, lecturer_id: int, area: str) -> LecturerExpertise:
+        """Add an expertise area for a lecturer."""
+        query = "INSERT INTO lecturer_expertise (lecturer_id, area) VALUES (?, ?)"
+        new_id = self._connection.execute_write(query, (lecturer_id, area))
+        row = self._connection.execute_one(
+            "SELECT * FROM lecturer_expertise WHERE expertise_id = ?", (new_id,)
+        )
+        return LecturerExpertise.from_row(row)
+
+    def add_publication(
+        self,
+        lecturer_id: int,
+        title: str,
+        journal: str | None = None,
+        publication_date: str | None = None,
+    ) -> Publication:
+        """Add a publication for a lecturer."""
+        query = """
+            INSERT INTO publication (lecturer_id, title, journal, publication_date)
+            VALUES (?, ?, ?, ?)
+        """
+        new_id = self._connection.execute_write(
+            query, (lecturer_id, title, journal, publication_date)
+        )
+        row = self._connection.execute_one(
+            "SELECT * FROM publication WHERE publication_id = ?", (new_id,)
+        )
+        return Publication.from_row(row)
+
+    def add_research_interest(
+        self,
+        lecturer_id: int,
+        interest: str,
+    ) -> LecturerResearchInterest:
+        """Add a research interest for a lecturer."""
+        query = """
+            INSERT INTO lecturer_research_interest (lecturer_id, interest)
+            VALUES (?, ?)
+        """
+        new_id = self._connection.execute_write(query, (lecturer_id, interest))
+        row = self._connection.execute_one(
+            "SELECT * FROM lecturer_research_interest WHERE interest_id = ?",
+            (new_id,),
+        )
+        return LecturerResearchInterest.from_row(row)
