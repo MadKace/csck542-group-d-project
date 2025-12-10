@@ -11,7 +11,12 @@ from src.models.orm.lecturer import (
     Publication,
 )
 from src.models.orm.programme import Programme
-from src.models.orm.research import ProjectFunding, ProjectOutcome, ResearchProject
+from src.models.orm.research import (
+    ProjectFunding,
+    ProjectOutcome,
+    ProjectPublication,
+    ResearchProject,
+)
 from src.models.orm.staff import NonAcademicStaff
 from src.models.orm.student import DisciplinaryRecord, Student, StudentGrade
 from src.models.orm.tables import (
@@ -36,6 +41,7 @@ __all__ = [
     "Programme",
     "ProjectFunding",
     "ProjectOutcome",
+    "ProjectPublication",
     "Publication",
     "ResearchArea",
     "ResearchProject",

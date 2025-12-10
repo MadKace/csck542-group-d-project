@@ -36,6 +36,9 @@ class ResearchProject(Base):
         back_populates="project"
     )
     outcomes: Mapped[list["ProjectOutcome"]] = relationship(back_populates="project")
+    publications: Mapped[list["ProjectPublication"]] = relationship(
+        back_populates="project"
+    )
     student_members: Mapped[list["Student"]] = relationship(
         secondary="research_project_member", back_populates="research_projects"
     )
@@ -67,3 +70,17 @@ class ProjectOutcome(Base):
 
     # Relationships
     project: Mapped["ResearchProject"] = relationship(back_populates="outcomes")
+
+
+class ProjectPublication(Base):
+    """Represents a publication from a research project."""
+
+    __tablename__ = "project_publication"
+
+    project_pub_id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("research_project.project_id"))
+    title: Mapped[str] = mapped_column(String(200))
+    publication_date: Mapped[str | None] = mapped_column(String(10))
+
+    # Relationships
+    project: Mapped["ResearchProject"] = relationship(back_populates="publications")
