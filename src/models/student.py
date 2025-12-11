@@ -1,42 +1,75 @@
-"""Student domain models."""
+"""Student ORM models."""
 
-from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from src.models.base import BaseModel
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from src.models.base import Base
 
-@dataclass
-class Student(BaseModel):
-    """Represents a student in the university."""
-
-    student_id: int
-    name: str
-    date_of_birth: str | None = None
-    contact_info: str | None = None
-    programme_id: int | None = None
-    year_of_study: int | None = None
-    graduation_status: str | None = None
-    advisor_id: int | None = None
+if TYPE_CHECKING:
+    from src.models.course import Course
+    from src.models.lecturer import Lecturer
+    from src.models.programme import Programme
+    from src.models.research import ResearchProject
 
 
-@dataclass
-class StudentGrade(BaseModel):
+class Student(Base):
+    """Represents a university student."""
+
+    __tablename__ = "student"
+
+    student_id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    date_of_birth: Mapped[str | None] = mapped_column(String(10))
+    contact_info: Mapped[str | None] = mapped_column(String(200))
+    programme_id: Mapped[int | None] = mapped_column(ForeignKey("programme.programme_id"))
+    year_of_study: Mapped[int | None]
+    graduation_status: Mapped[str | None] = mapped_column(String(20))
+    advisor_id: Mapped[int | None] = mapped_column(ForeignKey("lecturer.lecturer_id"))
+
+    # Relationships
+    programme: Mapped["Programme | None"] = relationship(back_populates="students")
+    advisor: Mapped["Lecturer | None"] = relationship(back_populates="advisees")
+    grades: Mapped[list["StudentGrade"]] = relationship(back_populates="student")
+    disciplinary_records: Mapped[list["DisciplinaryRecord"]] = relationship(
+        back_populates="student"
+    )
+    courses: Mapped[list["Course"]] = relationship(
+        secondary="student_course", back_populates="students"
+    )
+    research_projects: Mapped[list["ResearchProject"]] = relationship(
+        secondary="research_project_member", back_populates="student_members"
+    )
+
+
+class StudentGrade(Base):
     """Represents a grade record for a student."""
 
-    grade_id: int
-    student_id: int
-    course_id: int
-    assessment_type: str | None = None
-    grade: int | None = None
-    date_recorded: str | None = None
+    __tablename__ = "student_grade"
+
+    grade_id: Mapped[int] = mapped_column(primary_key=True)
+    student_id: Mapped[int] = mapped_column(ForeignKey("student.student_id"))
+    course_id: Mapped[int] = mapped_column(ForeignKey("course.course_id"))
+    assessment_type: Mapped[str | None] = mapped_column(String(50))
+    grade: Mapped[int | None]
+    date_recorded: Mapped[str | None] = mapped_column(String(10))
+
+    # Relationships
+    student: Mapped["Student"] = relationship(back_populates="grades")
+    course: Mapped["Course"] = relationship(back_populates="grades")
 
 
-@dataclass
-class DisciplinaryRecord(BaseModel):
+class DisciplinaryRecord(Base):
     """Represents a disciplinary record for a student."""
 
-    record_id: int
-    student_id: int
-    incident_date: str | None = None
-    description: str | None = None
-    action_taken: str | None = None
+    __tablename__ = "disciplinary_record"
+
+    record_id: Mapped[int] = mapped_column(primary_key=True)
+    student_id: Mapped[int] = mapped_column(ForeignKey("student.student_id"))
+    incident_date: Mapped[str | None] = mapped_column(String(10))
+    description: Mapped[str | None] = mapped_column(String(500))
+    action_taken: Mapped[str | None] = mapped_column(String(200))
+
+    # Relationships
+    student: Mapped["Student"] = relationship(back_populates="disciplinary_records")

@@ -1,91 +1,84 @@
-"""Research project repository for database operations."""
+"""Research project repository using SQLAlchemy ORM."""
 
-from src.exceptions import DatabaseError
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
 from src.models.research import ProjectFunding, ProjectOutcome, ResearchProject
+from src.models.tables import research_project_member
 from src.repositories.base import BaseRepository
 
 
 class ResearchProjectRepository(BaseRepository[ResearchProject]):
     """Repository for ResearchProject entity operations."""
 
-    @property
-    def table_name(self) -> str:
-        return "research_project"
+    def __init__(self, session: Session | None = None) -> None:
+        super().__init__(session)
 
     @property
     def model_class(self) -> type[ResearchProject]:
         return ResearchProject
 
-    @property
-    def primary_key(self) -> str:
-        return "project_id"
-
-    # Read
-
     def get_by_department(self, dept_id: int) -> list[ResearchProject]:
         """Get all research projects in a department."""
-        query = """
-            SELECT * FROM research_project
-            WHERE dept_id = ?
-            ORDER BY title
-        """
-        return self._execute_query(query, (dept_id,))
+        stmt = (
+            select(ResearchProject)
+            .where(ResearchProject.dept_id == dept_id)
+            .order_by(ResearchProject.title)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def get_by_head_lecturer(self, lecturer_id: int) -> ResearchProject | None:
         """Get the research project headed by a lecturer."""
-        query = "SELECT * FROM research_project WHERE head_lecturer_id = ?"
-        return self._execute_query_one(query, (lecturer_id,))
+        stmt = select(ResearchProject).where(
+            ResearchProject.head_lecturer_id == lecturer_id
+        )
+        return self._session.scalar(stmt)
 
     def get_funding(self, project_id: int) -> list[ProjectFunding]:
         """Get all funding sources for a project."""
-        query = """
-            SELECT * FROM project_funding
-            WHERE project_id = ?
-            ORDER BY source_name
-        """
-        rows = self._connection.execute(query, (project_id,))
-        return [ProjectFunding.from_row(row) for row in rows]
+        stmt = (
+            select(ProjectFunding)
+            .where(ProjectFunding.project_id == project_id)
+            .order_by(ProjectFunding.source_name)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def get_outcomes(self, project_id: int) -> list[ProjectOutcome]:
         """Get all outcomes for a project."""
-        query = """
-            SELECT * FROM project_outcome
-            WHERE project_id = ?
-            ORDER BY outcome_date DESC
-        """
-        rows = self._connection.execute(query, (project_id,))
-        return [ProjectOutcome.from_row(row) for row in rows]
+        stmt = (
+            select(ProjectOutcome)
+            .where(ProjectOutcome.project_id == project_id)
+            .order_by(ProjectOutcome.outcome_date.desc())
+        )
+        return list(self._session.scalars(stmt).all())
 
     def search(self, title: str) -> list[ResearchProject]:
         """Search projects by title."""
-        query = """
-            SELECT * FROM research_project
-            WHERE LOWER(title) LIKE LOWER(?)
-            ORDER BY title
-        """
-        return self._execute_query(query, (f"%{title}%",))
-
-    # Create / Update / Delete
+        stmt = (
+            select(ResearchProject)
+            .where(func.lower(ResearchProject.title).like(func.lower(f"%{title}%")))
+            .order_by(ResearchProject.title)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def add_member(self, project_id: int, student_id: int) -> bool:
         """Add a student member to a research project."""
-        query = """
-            INSERT INTO research_project_member (project_id, student_id)
-            VALUES (?, ?)
-        """
-        self._connection.execute_write(query, (project_id, student_id))
+        stmt = research_project_member.insert().values(
+            project_id=project_id, student_id=student_id
+        )
+        self._session.execute(stmt)
+        self._session.flush()
         return True
 
     def remove_member(self, project_id: int, student_id: int) -> bool:
         """Remove a student member from a research project."""
-        query = """
-            DELETE FROM research_project_member
-            WHERE project_id = ? AND student_id = ?
-        """
-        rows_affected = self._connection.execute_delete(
-            query, (project_id, student_id)
+        stmt = research_project_member.delete().where(
+            (research_project_member.c.project_id == project_id)
+            & (research_project_member.c.student_id == student_id)
         )
-        return rows_affected > 0
+        result = self._session.execute(stmt)
+        self._session.flush()
+        return result.rowcount > 0
 
     def add_funding(
         self,
@@ -94,19 +87,15 @@ class ResearchProjectRepository(BaseRepository[ResearchProject]):
         amount: float | None = None,
     ) -> ProjectFunding:
         """Add a funding source to a project."""
-        query = """
-            INSERT INTO project_funding (project_id, source_name, amount)
-            VALUES (?, ?, ?)
-        """
-        new_id = self._connection.execute_write(
-            query, (project_id, source_name, amount)
+        funding = ProjectFunding(
+            project_id=project_id,
+            source_name=source_name,
+            amount=amount,
         )
-        row = self._connection.execute_one(
-            "SELECT * FROM project_funding WHERE funding_id = ?", (new_id,)
-        )
-        if row is None:
-            raise DatabaseError("Failed to retrieve created funding record")
-        return ProjectFunding.from_row(row)
+        self._session.add(funding)
+        self._session.flush()
+        self._session.refresh(funding)
+        return funding
 
     def add_outcome(
         self,
@@ -115,16 +104,12 @@ class ResearchProjectRepository(BaseRepository[ResearchProject]):
         outcome_date: str | None = None,
     ) -> ProjectOutcome:
         """Add an outcome to a project."""
-        query = """
-            INSERT INTO project_outcome (project_id, description, outcome_date)
-            VALUES (?, ?, ?)
-        """
-        new_id = self._connection.execute_write(
-            query, (project_id, description, outcome_date)
+        outcome = ProjectOutcome(
+            project_id=project_id,
+            description=description,
+            outcome_date=outcome_date,
         )
-        row = self._connection.execute_one(
-            "SELECT * FROM project_outcome WHERE outcome_id = ?", (new_id,)
-        )
-        if row is None:
-            raise DatabaseError("Failed to retrieve created outcome record")
-        return ProjectOutcome.from_row(row)
+        self._session.add(outcome)
+        self._session.flush()
+        self._session.refresh(outcome)
+        return outcome

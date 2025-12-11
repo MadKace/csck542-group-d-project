@@ -1,6 +1,8 @@
-"""Lecturer repository for database operations."""
+"""Lecturer repository using SQLAlchemy ORM."""
 
-from src.exceptions import DatabaseError
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
 from src.models.lecturer import (
     Lecturer,
     LecturerExpertise,
@@ -8,116 +10,106 @@ from src.models.lecturer import (
     LecturerResearchInterest,
     Publication,
 )
+from src.models.tables import lecturer_course
 from src.repositories.base import BaseRepository
 
 
 class LecturerRepository(BaseRepository[Lecturer]):
     """Repository for Lecturer entity operations."""
 
-    @property
-    def table_name(self) -> str:
-        return "lecturer"
+    def __init__(self, session: Session | None = None) -> None:
+        super().__init__(session)
 
     @property
     def model_class(self) -> type[Lecturer]:
         return Lecturer
 
-    @property
-    def primary_key(self) -> str:
-        return "lecturer_id"
-
-    # Read
-
     def get_by_expertise(self, area: str) -> list[Lecturer]:
         """Get lecturers with expertise in a specific area."""
-        query = """
-            SELECT DISTINCT l.*
-            FROM lecturer l
-            INNER JOIN lecturer_expertise le ON l.lecturer_id = le.lecturer_id
-            WHERE LOWER(le.area) LIKE LOWER(?)
-            ORDER BY l.name
-        """
-        return self._execute_query(query, (f"%{area}%",))
+        stmt = (
+            select(Lecturer)
+            .distinct()
+            .join(LecturerExpertise)
+            .where(func.lower(LecturerExpertise.area).like(func.lower(f"%{area}%")))
+            .order_by(Lecturer.name)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def get_by_department(self, dept_id: int) -> list[Lecturer]:
         """Get all lecturers in a department."""
-        query = """
-            SELECT * FROM lecturer
-            WHERE dept_id = ?
-            ORDER BY name
-        """
-        return self._execute_query(query, (dept_id,))
+        stmt = (
+            select(Lecturer)
+            .where(Lecturer.dept_id == dept_id)
+            .order_by(Lecturer.name)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def get_qualifications(self, lecturer_id: int) -> list[LecturerQualification]:
         """Get all qualifications for a lecturer."""
-        query = """
-            SELECT * FROM lecturer_qualification
-            WHERE lecturer_id = ?
-            ORDER BY year_awarded DESC
-        """
-        rows = self._connection.execute(query, (lecturer_id,))
-        return [LecturerQualification.from_row(row) for row in rows]
+        stmt = (
+            select(LecturerQualification)
+            .where(LecturerQualification.lecturer_id == lecturer_id)
+            .order_by(LecturerQualification.year_awarded.desc())
+        )
+        return list(self._session.scalars(stmt).all())
 
     def get_expertise(self, lecturer_id: int) -> list[LecturerExpertise]:
         """Get all expertise areas for a lecturer."""
-        query = """
-            SELECT * FROM lecturer_expertise
-            WHERE lecturer_id = ?
-            ORDER BY area
-        """
-        rows = self._connection.execute(query, (lecturer_id,))
-        return [LecturerExpertise.from_row(row) for row in rows]
+        stmt = (
+            select(LecturerExpertise)
+            .where(LecturerExpertise.lecturer_id == lecturer_id)
+            .order_by(LecturerExpertise.area)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def get_publications(self, lecturer_id: int) -> list[Publication]:
         """Get all publications by a lecturer."""
-        query = """
-            SELECT * FROM publication
-            WHERE lecturer_id = ?
-            ORDER BY publication_date DESC
-        """
-        rows = self._connection.execute(query, (lecturer_id,))
-        return [Publication.from_row(row) for row in rows]
+        stmt = (
+            select(Publication)
+            .where(Publication.lecturer_id == lecturer_id)
+            .order_by(Publication.publication_date.desc())
+        )
+        return list(self._session.scalars(stmt).all())
 
     def get_research_interests(
         self,
         lecturer_id: int,
     ) -> list[LecturerResearchInterest]:
         """Get all research interests for a lecturer."""
-        query = """
-            SELECT * FROM lecturer_research_interest
-            WHERE lecturer_id = ?
-            ORDER BY interest
-        """
-        rows = self._connection.execute(query, (lecturer_id,))
-        return [LecturerResearchInterest.from_row(row) for row in rows]
+        stmt = (
+            select(LecturerResearchInterest)
+            .where(LecturerResearchInterest.lecturer_id == lecturer_id)
+            .order_by(LecturerResearchInterest.interest)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def search(self, name: str) -> list[Lecturer]:
         """Search lecturers by name."""
-        query = """
-            SELECT * FROM lecturer
-            WHERE LOWER(name) LIKE LOWER(?)
-            ORDER BY name
-        """
-        return self._execute_query(query, (f"%{name}%",))
-
-    # Create / Update / Delete
+        stmt = (
+            select(Lecturer)
+            .where(func.lower(Lecturer.name).like(func.lower(f"%{name}%")))
+            .order_by(Lecturer.name)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def assign_to_course(self, lecturer_id: int, course_id: int) -> bool:
         """Assign a lecturer to teach a course."""
-        query = "INSERT INTO lecturer_course (lecturer_id, course_id) VALUES (?, ?)"
-        self._connection.execute_write(query, (lecturer_id, course_id))
+        stmt = lecturer_course.insert().values(
+            lecturer_id=lecturer_id, course_id=course_id
+        )
+        self._session.execute(stmt)
+        self._session.flush()
         return True
 
     def unassign_from_course(self, lecturer_id: int, course_id: int) -> bool:
         """Remove a lecturer from a course."""
-        query = (
-            "DELETE FROM lecturer_course "
-            "WHERE lecturer_id = ? AND course_id = ?"
+        stmt = lecturer_course.delete().where(
+            (lecturer_course.c.lecturer_id == lecturer_id)
+            & (lecturer_course.c.course_id == course_id)
         )
-        rows_affected = self._connection.execute_delete(
-            query, (lecturer_id, course_id)
-        )
-        return rows_affected > 0
+        result = self._session.execute(stmt)
+        self._session.flush()
+        return result.rowcount > 0
 
     def add_qualification(
         self,
@@ -127,32 +119,24 @@ class LecturerRepository(BaseRepository[Lecturer]):
         year_awarded: int | None = None,
     ) -> LecturerQualification:
         """Add a qualification for a lecturer."""
-        query = """
-            INSERT INTO lecturer_qualification
-                (lecturer_id, qualification_name, institution, year_awarded)
-            VALUES (?, ?, ?, ?)
-        """
-        new_id = self._connection.execute_write(
-            query, (lecturer_id, qualification_name, institution, year_awarded)
+        qualification = LecturerQualification(
+            lecturer_id=lecturer_id,
+            qualification_name=qualification_name,
+            institution=institution,
+            year_awarded=year_awarded,
         )
-        row = self._connection.execute_one(
-            "SELECT * FROM lecturer_qualification WHERE qualification_id = ?",
-            (new_id,),
-        )
-        if row is None:
-            raise DatabaseError("Failed to retrieve created qualification")
-        return LecturerQualification.from_row(row)
+        self._session.add(qualification)
+        self._session.flush()
+        self._session.refresh(qualification)
+        return qualification
 
     def add_expertise(self, lecturer_id: int, area: str) -> LecturerExpertise:
         """Add an expertise area for a lecturer."""
-        query = "INSERT INTO lecturer_expertise (lecturer_id, area) VALUES (?, ?)"
-        new_id = self._connection.execute_write(query, (lecturer_id, area))
-        row = self._connection.execute_one(
-            "SELECT * FROM lecturer_expertise WHERE expertise_id = ?", (new_id,)
-        )
-        if row is None:
-            raise DatabaseError("Failed to retrieve created expertise")
-        return LecturerExpertise.from_row(row)
+        expertise = LecturerExpertise(lecturer_id=lecturer_id, area=area)
+        self._session.add(expertise)
+        self._session.flush()
+        self._session.refresh(expertise)
+        return expertise
 
     def add_publication(
         self,
@@ -162,19 +146,16 @@ class LecturerRepository(BaseRepository[Lecturer]):
         publication_date: str | None = None,
     ) -> Publication:
         """Add a publication for a lecturer."""
-        query = """
-            INSERT INTO publication (lecturer_id, title, journal, publication_date)
-            VALUES (?, ?, ?, ?)
-        """
-        new_id = self._connection.execute_write(
-            query, (lecturer_id, title, journal, publication_date)
+        publication = Publication(
+            lecturer_id=lecturer_id,
+            title=title,
+            journal=journal,
+            publication_date=publication_date,
         )
-        row = self._connection.execute_one(
-            "SELECT * FROM publication WHERE publication_id = ?", (new_id,)
-        )
-        if row is None:
-            raise DatabaseError("Failed to retrieve created publication")
-        return Publication.from_row(row)
+        self._session.add(publication)
+        self._session.flush()
+        self._session.refresh(publication)
+        return publication
 
     def add_research_interest(
         self,
@@ -182,15 +163,10 @@ class LecturerRepository(BaseRepository[Lecturer]):
         interest: str,
     ) -> LecturerResearchInterest:
         """Add a research interest for a lecturer."""
-        query = """
-            INSERT INTO lecturer_research_interest (lecturer_id, interest)
-            VALUES (?, ?)
-        """
-        new_id = self._connection.execute_write(query, (lecturer_id, interest))
-        row = self._connection.execute_one(
-            "SELECT * FROM lecturer_research_interest WHERE interest_id = ?",
-            (new_id,),
+        research_interest = LecturerResearchInterest(
+            lecturer_id=lecturer_id, interest=interest
         )
-        if row is None:
-            raise DatabaseError("Failed to retrieve created research interest")
-        return LecturerResearchInterest.from_row(row)
+        self._session.add(research_interest)
+        self._session.flush()
+        self._session.refresh(research_interest)
+        return research_interest

@@ -2,7 +2,7 @@
 
 from sqlalchemy import Column, ForeignKey, Integer, String, Table
 
-from src.models.orm.base import Base
+from src.models.base import Base
 
 # Student <-> Course (M:N)
 student_course = Table(

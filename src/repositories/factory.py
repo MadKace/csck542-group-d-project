@@ -1,6 +1,8 @@
 """Repository factory for creating repository instances."""
 
-from src.repositories.base import BaseRepository
+from sqlalchemy.orm import Session
+
+from src.database import get_session
 from src.repositories.course_repository import CourseRepository
 from src.repositories.department_repository import DepartmentRepository
 from src.repositories.lecturer_repository import LecturerRepository
@@ -11,55 +13,70 @@ from src.repositories.student_repository import StudentRepository
 
 
 class RepositoryFactory:
-    """Factory for creating and caching repository instances."""
+    """Factory for creating repository instances with shared sessions."""
 
-    _instances: dict[type, BaseRepository] = {}
+    def __init__(self, session: Session | None = None) -> None:
+        """Initialise factory with optional session."""
+        self._session = session or get_session()
+        self._instances: dict[type, object] = {}
 
-    @classmethod
-    def get_student_repository(cls) -> StudentRepository:
+    @property
+    def session(self) -> Session:
+        """Get the current session."""
+        return self._session
+
+    def get_student_repository(self) -> StudentRepository:
         """Get or create a StudentRepository instance."""
-        if StudentRepository not in cls._instances:
-            cls._instances[StudentRepository] = StudentRepository()
-        return cls._instances[StudentRepository]
+        if StudentRepository not in self._instances:
+            self._instances[StudentRepository] = StudentRepository(self._session)
+        return self._instances[StudentRepository]
 
-    @classmethod
-    def get_lecturer_repository(cls) -> LecturerRepository:
+    def get_lecturer_repository(self) -> LecturerRepository:
         """Get or create a LecturerRepository instance."""
-        if LecturerRepository not in cls._instances:
-            cls._instances[LecturerRepository] = LecturerRepository()
-        return cls._instances[LecturerRepository]
+        if LecturerRepository not in self._instances:
+            self._instances[LecturerRepository] = LecturerRepository(self._session)
+        return self._instances[LecturerRepository]
 
-    @classmethod
-    def get_course_repository(cls) -> CourseRepository:
+    def get_course_repository(self) -> CourseRepository:
         """Get or create a CourseRepository instance."""
-        if CourseRepository not in cls._instances:
-            cls._instances[CourseRepository] = CourseRepository()
-        return cls._instances[CourseRepository]
+        if CourseRepository not in self._instances:
+            self._instances[CourseRepository] = CourseRepository(self._session)
+        return self._instances[CourseRepository]
 
-    @classmethod
-    def get_department_repository(cls) -> DepartmentRepository:
+    def get_department_repository(self) -> DepartmentRepository:
         """Get or create a DepartmentRepository instance."""
-        if DepartmentRepository not in cls._instances:
-            cls._instances[DepartmentRepository] = DepartmentRepository()
-        return cls._instances[DepartmentRepository]
+        if DepartmentRepository not in self._instances:
+            self._instances[DepartmentRepository] = DepartmentRepository(self._session)
+        return self._instances[DepartmentRepository]
 
-    @classmethod
-    def get_programme_repository(cls) -> ProgrammeRepository:
+    def get_programme_repository(self) -> ProgrammeRepository:
         """Get or create a ProgrammeRepository instance."""
-        if ProgrammeRepository not in cls._instances:
-            cls._instances[ProgrammeRepository] = ProgrammeRepository()
-        return cls._instances[ProgrammeRepository]
+        if ProgrammeRepository not in self._instances:
+            self._instances[ProgrammeRepository] = ProgrammeRepository(self._session)
+        return self._instances[ProgrammeRepository]
 
-    @classmethod
-    def get_staff_repository(cls) -> StaffRepository:
+    def get_staff_repository(self) -> StaffRepository:
         """Get or create a StaffRepository instance."""
-        if StaffRepository not in cls._instances:
-            cls._instances[StaffRepository] = StaffRepository()
-        return cls._instances[StaffRepository]
+        if StaffRepository not in self._instances:
+            self._instances[StaffRepository] = StaffRepository(self._session)
+        return self._instances[StaffRepository]
 
-    @classmethod
-    def get_research_project_repository(cls) -> ResearchProjectRepository:
+    def get_research_project_repository(self) -> ResearchProjectRepository:
         """Get or create a ResearchProjectRepository instance."""
-        if ResearchProjectRepository not in cls._instances:
-            cls._instances[ResearchProjectRepository] = ResearchProjectRepository()
-        return cls._instances[ResearchProjectRepository]
+        if ResearchProjectRepository not in self._instances:
+            self._instances[ResearchProjectRepository] = ResearchProjectRepository(
+                self._session
+            )
+        return self._instances[ResearchProjectRepository]
+
+    def commit(self) -> None:
+        """Commit the current transaction."""
+        self._session.commit()
+
+    def rollback(self) -> None:
+        """Rollback the current transaction."""
+        self._session.rollback()
+
+    def close(self) -> None:
+        """Close the session."""
+        self._session.close()

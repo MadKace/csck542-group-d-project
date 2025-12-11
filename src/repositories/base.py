@@ -1,131 +1,121 @@
-"""Base repository providing common database operations."""
+"""Base repository providing common database operations using SQLAlchemy."""
 
 from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar
 
-from src.database import get_connection
-from src.exceptions import EntityNotFoundError
-from src.models.base import BaseModel
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError as SAIntegrityError
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
-T = TypeVar("T", bound=BaseModel)
+from src.database import get_session
+from src.exceptions import DatabaseError, EntityNotFoundError, IntegrityError
+from src.models.base import Base
+
+T = TypeVar("T", bound=Base)
 
 
 class BaseRepository(ABC, Generic[T]):
-    """Abstract base repository for database operations."""
+    """Abstract base repository for SQLAlchemy ORM operations."""
 
-    def __init__(self) -> None:
-        self._connection = get_connection()
-
-    @property
-    @abstractmethod
-    def table_name(self) -> str:
-        """The database table name."""
-        pass
+    def __init__(self, session: Session | None = None) -> None:
+        self._session = session or get_session()
 
     @property
     @abstractmethod
     def model_class(self) -> type[T]:
-        """The model class for this repository."""
+        """The ORM model class for this repository."""
         pass
 
     @property
-    @abstractmethod
-    def primary_key(self) -> str:
-        """The primary key column name."""
-        pass
+    def _primary_key(self) -> str:
+        """Get the primary key column name from the model."""
+        return self.model_class.__mapper__.primary_key[0].name
 
     def get_by_id(self, entity_id: int) -> T:
         """Retrieve an entity by its primary key."""
-        query = f"SELECT * FROM {self.table_name} WHERE {self.primary_key} = ?"
-        row = self._connection.execute_one(query, (entity_id,))
-
-        if row is None:
-            raise EntityNotFoundError(self.table_name, entity_id)
-
-        return self.model_class.from_row(row)
+        entity = self._session.get(self.model_class, entity_id)
+        if entity is None:
+            raise EntityNotFoundError(self.model_class.__tablename__, entity_id)
+        return entity
 
     def get_all(self) -> list[T]:
-        """Retrieve all entities from the table."""
-        query = f"SELECT * FROM {self.table_name}"
-        rows = self._connection.execute(query)
-        return [self.model_class.from_row(row) for row in rows]
+        """Retrieve all entities."""
+        stmt = select(self.model_class)
+        return list(self._session.scalars(stmt).all())
 
     def exists(self, entity_id: int) -> bool:
         """Check if an entity exists by its primary key."""
-        query = (
-            f"SELECT 1 FROM {self.table_name} "
-            f"WHERE {self.primary_key} = ? LIMIT 1"
-        )
-        row = self._connection.execute_one(query, (entity_id,))
-        return row is not None
+        entity = self._session.get(self.model_class, entity_id)
+        return entity is not None
 
     def count(self) -> int:
-        """Count the total number of entities in the table."""
-        query = f"SELECT COUNT(*) as cnt FROM {self.table_name}"
-        row = self._connection.execute_one(query)
-        return row["cnt"] if row else 0
-
-    def _execute_query(
-        self,
-        query: str,
-        params: tuple[Any, ...] | None = None,
-    ) -> list[T]:
-        """Execute a query and return model instances."""
-        rows = self._connection.execute(query, params)
-        return [self.model_class.from_row(row) for row in rows]
-
-    # Method to avoid "result[0] if result else None" kinda stuff
-    def _execute_query_one(
-        self,
-        query: str,
-        params: tuple[Any, ...] | None = None,
-    ) -> T | None:
-        """Execute a query and return a single model instance (or None)."""
-        row = self._connection.execute_one(query, params)
-        if row is None:
-            return None
-        return self.model_class.from_row(row)
+        """Count the total number of entities."""
+        stmt = select(func.count()).select_from(self.model_class)
+        return self._session.scalar(stmt) or 0
 
     def create(self, **kwargs: Any) -> T:
-        """Create a new entity and return it with its generated ID."""
+        """Create a new entity and return it."""
         if not kwargs:
             raise ValueError("No fields provided for create")
 
-        columns = ", ".join(kwargs.keys())
-        placeholders = ", ".join("?" for _ in kwargs)
-        values = tuple(kwargs.values())
-
-        query = f"INSERT INTO {self.table_name} ({columns}) VALUES ({placeholders})"
-        new_id = self._connection.execute_write(query, values)
-
-        return self.get_by_id(new_id)
+        try:
+            entity = self.model_class(**kwargs)
+            self._session.add(entity)
+            self._session.flush()
+            self._session.refresh(entity)
+            return entity
+        except SAIntegrityError as e:
+            self._session.rollback()
+            raise IntegrityError(str(e.orig), e) from e
+        except SQLAlchemyError as e:
+            self._session.rollback()
+            raise DatabaseError(str(e), e) from e
 
     def update(self, entity_id: int, **kwargs: Any) -> T:
         """Update an existing entity and return it."""
         if not kwargs:
             raise ValueError("No fields provided for update")
 
-        if not self.exists(entity_id):
-            raise EntityNotFoundError(self.table_name, entity_id)
+        entity = self._session.get(self.model_class, entity_id)
+        if entity is None:
+            raise EntityNotFoundError(self.model_class.__tablename__, entity_id)
 
-        set_clause = ", ".join(f"{key} = ?" for key in kwargs)
-        values = tuple(kwargs.values()) + (entity_id,)
+        try:
+            for key, value in kwargs.items():
+                setattr(entity, key, value)
 
-        query = (
-            f"UPDATE {self.table_name} "
-            f"SET {set_clause} "
-            f"WHERE {self.primary_key} = ?"
-        )
-        self._connection.execute_write(query, values)
-
-        return self.get_by_id(entity_id)
+            self._session.flush()
+            self._session.refresh(entity)
+            return entity
+        except SAIntegrityError as e:
+            self._session.rollback()
+            raise IntegrityError(str(e.orig), e) from e
+        except SQLAlchemyError as e:
+            self._session.rollback()
+            raise DatabaseError(str(e), e) from e
 
     def delete(self, entity_id: int) -> bool:
         """Delete an entity by its primary key."""
-        if not self.exists(entity_id):
+        entity = self._session.get(self.model_class, entity_id)
+        if entity is None:
             return False
 
-        query = f"DELETE FROM {self.table_name} WHERE {self.primary_key} = ?"
-        self._connection.execute_write(query, (entity_id,))
+        try:
+            self._session.delete(entity)
+            self._session.flush()
+            return True
+        except SAIntegrityError as e:
+            self._session.rollback()
+            raise IntegrityError(str(e.orig), e) from e
+        except SQLAlchemyError as e:
+            self._session.rollback()
+            raise DatabaseError(str(e), e) from e
 
-        return True
+    def commit(self) -> None:
+        """Commit the current transaction."""
+        self._session.commit()
+
+    def rollback(self) -> None:
+        """Rollback the current transaction."""
+        self._session.rollback()

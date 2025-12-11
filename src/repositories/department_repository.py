@@ -1,6 +1,8 @@
-"""Department repository for database operations."""
+"""Department repository using SQLAlchemy ORM."""
 
-from src.exceptions import DatabaseError
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
 from src.models.department import Department, ResearchArea
 from src.repositories.base import BaseRepository
 
@@ -8,76 +10,60 @@ from src.repositories.base import BaseRepository
 class DepartmentRepository(BaseRepository[Department]):
     """Repository for Department entity operations."""
 
-    @property
-    def table_name(self) -> str:
-        return "department"
+    def __init__(self, session: Session | None = None) -> None:
+        super().__init__(session)
 
     @property
     def model_class(self) -> type[Department]:
         return Department
 
-    @property
-    def primary_key(self) -> str:
-        return "dept_id"
-
-    # Read
-
     def get_by_name(self, name: str) -> Department | None:
         """Get a department by its name."""
-        query = "SELECT * FROM department WHERE name = ?"
-        return self._execute_query_one(query, (name,))
+        stmt = select(Department).where(Department.name == name)
+        return self._session.scalar(stmt)
 
     def get_by_faculty(self, faculty: str) -> list[Department]:
         """Get all departments in a faculty."""
-        query = """
-            SELECT * FROM department
-            WHERE faculty = ?
-            ORDER BY name
-        """
-        return self._execute_query(query, (faculty,))
+        stmt = (
+            select(Department)
+            .where(Department.faculty == faculty)
+            .order_by(Department.name)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def get_research_areas(self, dept_id: int) -> list[ResearchArea]:
         """Get all research areas for a department."""
-        query = """
-            SELECT * FROM department_research_area
-            WHERE dept_id = ?
-            ORDER BY area
-        """
-        rows = self._connection.execute(query, (dept_id,))
-        return [ResearchArea.from_row(row) for row in rows]
+        stmt = (
+            select(ResearchArea)
+            .where(ResearchArea.dept_id == dept_id)
+            .order_by(ResearchArea.area)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def get_departments_with_research_area(self, area: str) -> list[Department]:
         """Get departments with a matching research area."""
-        query = """
-            SELECT DISTINCT d.*
-            FROM department d
-            INNER JOIN department_research_area dra ON d.dept_id = dra.dept_id
-            WHERE LOWER(dra.area) LIKE LOWER(?)
-            ORDER BY d.name
-        """
-        return self._execute_query(query, (f"%{area}%",))
+        stmt = (
+            select(Department)
+            .distinct()
+            .join(ResearchArea)
+            .where(func.lower(ResearchArea.area).like(func.lower(f"%{area}%")))
+            .order_by(Department.name)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def search(self, name: str) -> list[Department]:
         """Search departments by name."""
-        query = """
-            SELECT * FROM department
-            WHERE LOWER(name) LIKE LOWER(?)
-            ORDER BY name
-        """
-        return self._execute_query(query, (f"%{name}%",))
-
-    # Create / Update / Delete
+        stmt = (
+            select(Department)
+            .where(func.lower(Department.name).like(func.lower(f"%{name}%")))
+            .order_by(Department.name)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def add_research_area(self, dept_id: int, area: str) -> ResearchArea:
         """Add a research area to a department."""
-        query = """
-            INSERT INTO department_research_area (dept_id, area)
-            VALUES (?, ?)
-        """
-        new_id = self._connection.execute_write(query, (dept_id, area))
-        row = self._connection.execute_one(
-            "SELECT * FROM department_research_area WHERE area_id = ?", (new_id,)
-        )
-        if row is None:
-            raise DatabaseError("Failed to retrieve created research area")
-        return ResearchArea.from_row(row)
+        research_area = ResearchArea(dept_id=dept_id, area=area)
+        self._session.add(research_area)
+        self._session.flush()
+        self._session.refresh(research_area)
+        return research_area

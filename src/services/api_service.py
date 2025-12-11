@@ -1,5 +1,6 @@
 """API service providing the main interface for database access."""
 
+from src.database import get_session
 from src.repositories import (
     CourseRepository,
     DepartmentRepository,
@@ -16,11 +17,12 @@ class APIService:
     """Facade providing a single entry point for all data access.
 
     Singleton that exposes repositories as properties for GUI consumption.
+    Uses a shared session for transaction consistency.
 
     Example:
         api = APIService()
         students = api.student_repo.get_by_advisor(lecturer_id=1)
-        courses = api.course_repo.get_by_department(dept_id=1)
+        api.commit()  # Commit changes
     """
 
     _instance: "APIService | None" = None
@@ -33,48 +35,53 @@ class APIService:
         return cls._instance
 
     def _initialise(self) -> None:
-        """Initialise the service with repository instances."""
-        self._student_repo = RepositoryFactory.get_student_repository()
-        self._lecturer_repo = RepositoryFactory.get_lecturer_repository()
-        self._course_repo = RepositoryFactory.get_course_repository()
-        self._department_repo = RepositoryFactory.get_department_repository()
-        self._programme_repo = RepositoryFactory.get_programme_repository()
-        self._staff_repo = RepositoryFactory.get_staff_repository()
-        self._research_project_repo = (
-            RepositoryFactory.get_research_project_repository()
-        )
+        """Initialise the service with a factory instance."""
+        self._factory = RepositoryFactory(get_session())
 
     @property
     def student_repo(self) -> StudentRepository:
         """Access student data operations."""
-        return self._student_repo
+        return self._factory.get_student_repository()
 
     @property
     def lecturer_repo(self) -> LecturerRepository:
         """Access lecturer data operations."""
-        return self._lecturer_repo
+        return self._factory.get_lecturer_repository()
 
     @property
     def course_repo(self) -> CourseRepository:
         """Access course data operations."""
-        return self._course_repo
+        return self._factory.get_course_repository()
 
     @property
     def department_repo(self) -> DepartmentRepository:
         """Access department data operations."""
-        return self._department_repo
+        return self._factory.get_department_repository()
 
     @property
     def programme_repo(self) -> ProgrammeRepository:
         """Access programme data operations."""
-        return self._programme_repo
+        return self._factory.get_programme_repository()
 
     @property
     def staff_repo(self) -> StaffRepository:
         """Access staff data operations."""
-        return self._staff_repo
+        return self._factory.get_staff_repository()
 
     @property
     def research_project_repo(self) -> ResearchProjectRepository:
         """Access research project data operations."""
-        return self._research_project_repo
+        return self._factory.get_research_project_repository()
+
+    def commit(self) -> None:
+        """Commit the current transaction."""
+        self._factory.commit()
+
+    def rollback(self) -> None:
+        """Rollback the current transaction."""
+        self._factory.rollback()
+
+    def close(self) -> None:
+        """Close the session and reset the singleton."""
+        self._factory.close()
+        APIService._instance = None

@@ -1,10 +1,13 @@
-"""Student repository for database operations."""
+"""Student repository using SQLAlchemy ORM."""
 
-from src.exceptions import DatabaseError
-from src.models.student import (
-    DisciplinaryRecord,
-    Student,
-    StudentGrade,
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from src.models.student import DisciplinaryRecord, Student, StudentGrade
+from src.models.tables import (
+    lecturer_course,
+    research_project_member,
+    student_course,
 )
 from src.repositories.base import BaseRepository
 
@@ -12,28 +15,21 @@ from src.repositories.base import BaseRepository
 class StudentRepository(BaseRepository[Student]):
     """Repository for Student entity operations."""
 
-    @property
-    def table_name(self) -> str:
-        return "student"
+    def __init__(self, session: Session | None = None) -> None:
+        super().__init__(session)
 
     @property
     def model_class(self) -> type[Student]:
         return Student
 
-    @property
-    def primary_key(self) -> str:
-        return "student_id"
-
-    # Read
-
     def get_by_advisor(self, lecturer_id: int) -> list[Student]:
         """Get all students advised by a lecturer."""
-        query = """
-            SELECT * FROM student
-            WHERE advisor_id = ?
-            ORDER BY name
-        """
-        return self._execute_query(query, (lecturer_id,))
+        stmt = (
+            select(Student)
+            .where(Student.advisor_id == lecturer_id)
+            .order_by(Student.name)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def get_in_course_by_lecturer(
         self,
@@ -41,91 +37,96 @@ class StudentRepository(BaseRepository[Student]):
         lecturer_id: int,
     ) -> list[Student]:
         """Get students enrolled in a course taught by a specific lecturer."""
-        query = """
-            SELECT DISTINCT s.*
-            FROM student s
-            INNER JOIN student_course sc ON s.student_id = sc.student_id
-            INNER JOIN lecturer_course lc ON sc.course_id = lc.course_id
-            WHERE sc.course_id = ?
-              AND lc.lecturer_id = ?
-            ORDER BY s.name
-        """
-        return self._execute_query(query, (course_id, lecturer_id))
+        stmt = (
+            select(Student)
+            .distinct()
+            .join(student_course, Student.student_id == student_course.c.student_id)
+            .join(lecturer_course, student_course.c.course_id == lecturer_course.c.course_id)
+            .where(
+                (student_course.c.course_id == course_id)
+                & (lecturer_course.c.lecturer_id == lecturer_id)
+            )
+            .order_by(Student.name)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def get_grades(self, student_id: int) -> list[StudentGrade]:
         """Get all grades for a student."""
-        query = """
-            SELECT * FROM student_grade
-            WHERE student_id = ?
-            ORDER BY date_recorded DESC
-        """
-        rows = self._connection.execute(query, (student_id,))
-        return [StudentGrade.from_row(row) for row in rows]
+        stmt = (
+            select(StudentGrade)
+            .where(StudentGrade.student_id == student_id)
+            .order_by(StudentGrade.date_recorded.desc())
+        )
+        return list(self._session.scalars(stmt).all())
 
     def get_disciplinary_records(self, student_id: int) -> list[DisciplinaryRecord]:
         """Get all disciplinary records for a student."""
-        query = """
-            SELECT * FROM disciplinary_record
-            WHERE student_id = ?
-            ORDER BY incident_date DESC
-        """
-        rows = self._connection.execute(query, (student_id,))
-        return [DisciplinaryRecord.from_row(row) for row in rows]
+        stmt = (
+            select(DisciplinaryRecord)
+            .where(DisciplinaryRecord.student_id == student_id)
+            .order_by(DisciplinaryRecord.incident_date.desc())
+        )
+        return list(self._session.scalars(stmt).all())
 
     def get_by_programme(self, programme_id: int) -> list[Student]:
         """Get all students enrolled in a programme."""
-        query = """
-            SELECT * FROM student
-            WHERE programme_id = ?
-            ORDER BY year_of_study, name
-        """
-        return self._execute_query(query, (programme_id,))
+        stmt = (
+            select(Student)
+            .where(Student.programme_id == programme_id)
+            .order_by(Student.year_of_study, Student.name)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def get_by_course(self, course_id: int) -> list[Student]:
         """Get all students enrolled in a course."""
-        query = """
-            SELECT s.*
-            FROM student s
-            INNER JOIN student_course sc ON s.student_id = sc.student_id
-            WHERE sc.course_id = ?
-            ORDER BY s.name
-        """
-        return self._execute_query(query, (course_id,))
+        stmt = (
+            select(Student)
+            .join(student_course, Student.student_id == student_course.c.student_id)
+            .where(student_course.c.course_id == course_id)
+            .order_by(Student.name)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def search(self, name: str) -> list[Student]:
         """Search students by name."""
-        query = """
-            SELECT * FROM student
-            WHERE LOWER(name) LIKE LOWER(?)
-            ORDER BY name
-        """
-        return self._execute_query(query, (f"%{name}%",))
+        stmt = (
+            select(Student)
+            .where(func.lower(Student.name).like(func.lower(f"%{name}%")))
+            .order_by(Student.name)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def get_by_research_project(self, project_id: int) -> list[Student]:
         """Get all student members of a research project."""
-        query = """
-            SELECT s.*
-            FROM student s
-            INNER JOIN research_project_member rpm
-                ON s.student_id = rpm.student_id
-            WHERE rpm.project_id = ?
-            ORDER BY s.name
-        """
-        return self._execute_query(query, (project_id,))
-
-    # Create / Update / Delete
+        stmt = (
+            select(Student)
+            .join(
+                research_project_member,
+                Student.student_id == research_project_member.c.student_id,
+            )
+            .where(research_project_member.c.project_id == project_id)
+            .order_by(Student.name)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def enrol_in_course(self, student_id: int, course_id: int) -> bool:
         """Enrol a student in a course."""
-        query = "INSERT INTO student_course (student_id, course_id) VALUES (?, ?)"
-        self._connection.execute_write(query, (student_id, course_id))
+        stmt = student_course.insert().values(
+            student_id=student_id, course_id=course_id
+        )
+        self._session.execute(stmt)
+        self._session.flush()
         return True
 
     def unenrol_from_course(self, student_id: int, course_id: int) -> bool:
         """Remove a student from a course."""
-        query = "DELETE FROM student_course WHERE student_id = ? AND course_id = ?"
-        rows_affected = self._connection.execute_delete(query, (student_id, course_id))
-        return rows_affected > 0
+        stmt = student_course.delete().where(
+            (student_course.c.student_id == student_id)
+            & (student_course.c.course_id == course_id)
+        )
+        result = self._session.execute(stmt)
+        self._session.flush()
+        return result.rowcount > 0
 
     def add_grade(
         self,
@@ -136,20 +137,17 @@ class StudentRepository(BaseRepository[Student]):
         date_recorded: str | None = None,
     ) -> StudentGrade:
         """Add a grade record for a student."""
-        query = """
-            INSERT INTO student_grade
-                (student_id, course_id, assessment_type, grade, date_recorded)
-            VALUES (?, ?, ?, ?, ?)
-        """
-        new_id = self._connection.execute_write(
-            query, (student_id, course_id, assessment_type, grade, date_recorded)
+        student_grade = StudentGrade(
+            student_id=student_id,
+            course_id=course_id,
+            assessment_type=assessment_type,
+            grade=grade,
+            date_recorded=date_recorded,
         )
-        row = self._connection.execute_one(
-            "SELECT * FROM student_grade WHERE grade_id = ?", (new_id,)
-        )
-        if row is None:
-            raise DatabaseError("Failed to retrieve created grade record")
-        return StudentGrade.from_row(row)
+        self._session.add(student_grade)
+        self._session.flush()
+        self._session.refresh(student_grade)
+        return student_grade
 
     def add_disciplinary_record(
         self,
@@ -159,17 +157,13 @@ class StudentRepository(BaseRepository[Student]):
         action_taken: str | None = None,
     ) -> DisciplinaryRecord:
         """Add a disciplinary record for a student."""
-        query = """
-            INSERT INTO disciplinary_record
-                (student_id, incident_date, description, action_taken)
-            VALUES (?, ?, ?, ?)
-        """
-        new_id = self._connection.execute_write(
-            query, (student_id, incident_date, description, action_taken)
+        record = DisciplinaryRecord(
+            student_id=student_id,
+            incident_date=incident_date,
+            description=description,
+            action_taken=action_taken,
         )
-        row = self._connection.execute_one(
-            "SELECT * FROM disciplinary_record WHERE record_id = ?", (new_id,)
-        )
-        if row is None:
-            raise DatabaseError("Failed to retrieve created disciplinary record")
-        return DisciplinaryRecord.from_row(row)
+        self._session.add(record)
+        self._session.flush()
+        self._session.refresh(record)
+        return record

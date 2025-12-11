@@ -1,19 +1,29 @@
-"""Non-academic staff domain models."""
+"""Non-academic staff ORM models."""
 
-from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from src.models.base import BaseModel
+from sqlalchemy import ForeignKey, Numeric, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from src.models.base import Base
+
+if TYPE_CHECKING:
+    from src.models.department import Department
 
 
-@dataclass
-class NonAcademicStaff(BaseModel):
+class NonAcademicStaff(Base):
     """Represents a non-academic staff member."""
 
-    staff_id: int
-    name: str
-    job_title: str | None = None
-    dept_id: int | None = None
-    employment_type: str | None = None
-    contract_details: str | None = None
-    salary: float | None = None
-    emergency_contact: str | None = None
+    __tablename__ = "non_academic_staff"
+
+    staff_id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    job_title: Mapped[str | None] = mapped_column(String(100))
+    dept_id: Mapped[int | None] = mapped_column(ForeignKey("department.dept_id"))
+    employment_type: Mapped[str | None] = mapped_column(String(20))
+    contract_details: Mapped[str | None] = mapped_column(String(500))
+    salary: Mapped[float | None] = mapped_column(Numeric(10, 2))
+    emergency_contact: Mapped[str | None] = mapped_column(String(200))
+
+    # Relationships
+    department: Mapped["Department | None"] = relationship(back_populates="staff")

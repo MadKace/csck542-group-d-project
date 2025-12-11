@@ -1,4 +1,7 @@
-"""Programme repository for database operations."""
+"""Programme repository using SQLAlchemy ORM."""
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from src.models.programme import Programme
 from src.repositories.base import BaseRepository
@@ -7,28 +10,23 @@ from src.repositories.base import BaseRepository
 class ProgrammeRepository(BaseRepository[Programme]):
     """Repository for Programme entity operations."""
 
-    @property
-    def table_name(self) -> str:
-        return "programme"
+    def __init__(self, session: Session | None = None) -> None:
+        super().__init__(session)
 
     @property
     def model_class(self) -> type[Programme]:
         return Programme
 
-    @property
-    def primary_key(self) -> str:
-        return "programme_id"
-
     def get_by_name(self, name: str) -> Programme | None:
         """Get a programme by its name."""
-        query = "SELECT * FROM programme WHERE name = ?"
-        return self._execute_query_one(query, (name,))
+        stmt = select(Programme).where(Programme.name == name)
+        return self._session.scalar(stmt)
 
     def get_by_degree(self, degree_awarded: str) -> list[Programme]:
         """Get all programmes awarding a specific degree."""
-        query = """
-            SELECT * FROM programme
-            WHERE degree_awarded = ?
-            ORDER BY name
-        """
-        return self._execute_query(query, (degree_awarded,))
+        stmt = (
+            select(Programme)
+            .where(Programme.degree_awarded == degree_awarded)
+            .order_by(Programme.name)
+        )
+        return list(self._session.scalars(stmt).all())

@@ -1,4 +1,7 @@
-"""Staff repository for database operations."""
+"""Staff repository using SQLAlchemy ORM."""
+
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 from src.models.staff import NonAcademicStaff
 from src.repositories.base import BaseRepository
@@ -7,53 +10,52 @@ from src.repositories.base import BaseRepository
 class StaffRepository(BaseRepository[NonAcademicStaff]):
     """Repository for NonAcademicStaff entity operations."""
 
-    @property
-    def table_name(self) -> str:
-        return "non_academic_staff"
+    def __init__(self, session: Session | None = None) -> None:
+        super().__init__(session)
 
     @property
     def model_class(self) -> type[NonAcademicStaff]:
         return NonAcademicStaff
 
-    @property
-    def primary_key(self) -> str:
-        return "staff_id"
-
     def get_by_department(self, dept_id: int) -> list[NonAcademicStaff]:
         """Get all staff members in a department."""
-        query = """
-            SELECT * FROM non_academic_staff
-            WHERE dept_id = ?
-            ORDER BY name
-        """
-        return self._execute_query(query, (dept_id,))
+        stmt = (
+            select(NonAcademicStaff)
+            .where(NonAcademicStaff.dept_id == dept_id)
+            .order_by(NonAcademicStaff.name)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def get_by_job_title(self, job_title: str) -> list[NonAcademicStaff]:
         """Get all staff members with a specific job title."""
-        query = """
-            SELECT * FROM non_academic_staff
-            WHERE LOWER(job_title) LIKE LOWER(?)
-            ORDER BY name
-        """
-        return self._execute_query(query, (f"%{job_title}%",))
+        stmt = (
+            select(NonAcademicStaff)
+            .where(
+                func.lower(NonAcademicStaff.job_title).like(
+                    func.lower(f"%{job_title}%")
+                )
+            )
+            .order_by(NonAcademicStaff.name)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def get_by_employment_type(
         self,
         employment_type: str,
     ) -> list[NonAcademicStaff]:
         """Get all staff members with a specific employment type."""
-        query = """
-            SELECT * FROM non_academic_staff
-            WHERE employment_type = ?
-            ORDER BY name
-        """
-        return self._execute_query(query, (employment_type,))
+        stmt = (
+            select(NonAcademicStaff)
+            .where(NonAcademicStaff.employment_type == employment_type)
+            .order_by(NonAcademicStaff.name)
+        )
+        return list(self._session.scalars(stmt).all())
 
     def search(self, name: str) -> list[NonAcademicStaff]:
         """Search staff by name."""
-        query = """
-            SELECT * FROM non_academic_staff
-            WHERE LOWER(name) LIKE LOWER(?)
-            ORDER BY name
-        """
-        return self._execute_query(query, (f"%{name}%",))
+        stmt = (
+            select(NonAcademicStaff)
+            .where(func.lower(NonAcademicStaff.name).like(func.lower(f"%{name}%")))
+            .order_by(NonAcademicStaff.name)
+        )
+        return list(self._session.scalars(stmt).all())
