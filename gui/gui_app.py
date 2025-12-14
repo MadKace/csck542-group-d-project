@@ -985,8 +985,271 @@ with ui.column().classes('w-full'):
                         row_key='course_id',
                     ).classes('w-full border border-black text-black bg-white')
                 with ui.tab_panel(tab_courses_manage).classes('w-full'):
-                    inputs8 = {}
-    with ui.tab_panels(main_tabs, value = tab_rp).classes('w-full'):
+                    with ui.dialog() as add_course_dialog:
+                        with ui.card().classes('w-[400px]'):
+                            ui.label('Add Course').classes('text-lg font-bold')
+
+                            def get_next_course_id(df):
+                                if df.empty:
+                                    return 1
+                                return int(df['course_id'].max()) + 1
+
+
+                            new_course_inputs = {}
+
+                            # Create input fields for all columns
+                            for col in all_courses_df.columns:
+                                if col == 'course_id':
+                                    # Show the auto-generated student_id as read-only
+                                    new_course_id = get_next_course_id(all_courses_df)
+                                    new_course_inputs[col] = ui.input(
+                                        label=f'Course ID',
+                                        value=str(new_course_id)
+                                    ).props('readonly')
+                                else:
+                                    # Create editable input for other columns
+                                    new_course_inputs[col] = ui.input(
+                                        label=col.replace('_', ' ').title()
+                                    )
+
+
+                            def save_course():
+                                course_data = {col: inp.value for col, inp in new_course_inputs.items()}
+
+                                for col, value in course_data.items():
+                                    if col != 'course_id' and not value.strip():
+                                        ui.notify(f'{col.replace("_", " ").title()} cannot be blank', type='negative')
+                                        return
+
+                                #print(course_data)
+
+                                course = api.course_repo.create(**course_data)
+                                api.commit()
+
+                                global all_courses_df
+                                all_courses_df = pd.concat([all_courses_df, pd.DataFrame([course_data])],
+                                                            ignore_index=True)
+
+                                add_course_dialog.close()
+                                ui.notify('Course added successfully', type='positive')
+
+                                tbl_view_courses.rows[:] = all_courses_df.to_dict('records')
+                                tbl_view_courses.update()
+
+                            with ui.row().classes('gap-2 mt-4'):
+                                ui.button('Cancel', on_click=add_course_dialog.close)
+                                ui.button('Save', on_click=save_course)
+                    with ui.dialog() as edit_course_dialog:
+                        with ui.card().classes('w-[400px]'):
+                            ui.label('Edit Course').classes('text-lg font-bold')
+
+                            edit_course_inputs = {}
+                            selected_course_id = {'value': None}  # Store selected ID
+
+
+                            # course ID selector
+                            def validate_and_load_course():
+                                course_id_value = edit_course_inputs['course_id_selector'].value
+
+                                if not course_id_value or not course_id_value.strip():
+                                    ui.notify('Please enter a course ID', type='negative')
+                                    return
+
+                                # Check if course exists
+                                try:
+                                    course_id_int = int(course_id_value)
+                                except ValueError:
+                                    ui.notify('Course ID must be a number', type='negative')
+                                    return
+
+                                if course_id_int not in all_courses_df['course_id'].values:
+                                    ui.notify(f'course ID {course_id_int} does not exist', type='negative')
+                                    return
+
+                                # Load course data
+                                selected_course_id['value'] = course_id_int
+                                course_row = all_courses_df[all_courses_df['course_id'] == course_id_int].iloc[0]
+
+                                # Populate input fields
+                                for col in all_courses_df.columns:
+                                    if col != 'course_id':
+                                        edit_course_inputs[col].value = str(course_row[col])
+
+                                ui.notify(f'Loaded course {course_id_int}', type='positive')
+
+
+                            # course ID input with dropdown
+                            with ui.row().classes('w-full items-end gap-2'):
+                                edit_course_inputs['course_id_selector'] = ui.select(
+                                    label='Course ID',
+                                    options=sorted(all_courses_df['course_id'].astype(str).tolist()),
+                                    with_input=True
+                                ).classes('flex-grow')
+                                ui.button('Load', on_click=validate_and_load_course)
+
+                            ui.separator()
+
+                            # Create input fields for all other columns
+                            for col in all_courses_df.columns:
+                                if col != 'course_id':
+                                    edit_course_inputs[col] = ui.input(
+                                        label=col.replace('_', ' ').title()
+                                    ).props('readonly')  # Start as readonly until course is loaded
+
+
+                            def enable_course_editing():
+                                if selected_course_id['value'] is None:
+                                    ui.notify('Please load a course first', type='negative')
+                                    return
+
+                                # Enable all fields for editing
+                                for col in all_courses_df.columns:
+                                    if col != 'course_id':
+                                        edit_course_inputs[col].props(remove='readonly')
+
+
+                            def save_edited_course():
+                                if selected_course_id['value'] is None:
+                                    ui.notify('Please load a course first', type='negative')
+                                    return
+
+                                # Get the updated values
+                                updated_data = {col: inp.value for col, inp in edit_course_inputs.items() if
+                                                col != 'course_id_selector'}
+
+                                # Validate that no fields are blank
+                                for col, value in updated_data.items():
+                                    if col != 'course_id' and (not value or not str(value).strip()):
+                                        ui.notify(f'{col.replace("_", " ").title()} cannot be blank', type='negative')
+                                        return
+
+                                # Update in API
+                                course = api.course_repo.update(selected_course_id['value'], **updated_data)
+
+                                # Update the dataframe
+                                global all_courses_df
+                                idx = \
+                                    all_courses_df[
+                                        all_courses_df['course_id'] == selected_course_id['value']].index[0]
+                                for col, value in updated_data.items():
+                                    all_courses_df.at[idx, col] = value
+
+                                # Update the table
+                                tbl_view_courses.rows = all_courses_df.to_dict('records')
+                                tbl_view_courses.update()
+
+                                edit_course_dialog.close()
+                                ui.notify('Course updated successfully', type='positive')
+
+
+                            with ui.row().classes('gap-2 mt-4'):
+                                ui.button('Cancel', on_click=edit_course_dialog.close)
+                                ui.button('Edit', on_click=enable_course_editing)
+                                ui.button('Save', on_click=save_edited_course)
+                    with ui.dialog() as delete_course_dialog:
+                        with ui.card().classes('w-[400px]'):
+                            ui.label('Delete Course').classes('text-lg font-bold')
+
+                            delete_course_inputs = {}
+                            delete_selected_course_id = {'value': None}
+
+
+                            # course ID selector
+                            def validate_and_load_course_for_delete():
+                                delete_course_id_value = delete_course_inputs['course_id_selector'].value
+
+                                if not delete_course_id_value or not delete_course_id_value.strip():
+                                    ui.notify('Please enter a course ID', type='negative')
+                                    return
+
+                                # Check if course exists
+                                try:
+                                    delete_course_id_int = int(delete_course_id_value)
+                                except ValueError:
+                                    ui.notify('course ID must be a number', type='negative')
+                                    return
+
+                                if delete_course_id_int not in all_courses_df['course_id'].values:
+                                    ui.notify(f'course ID {delete_course_id_int} does not exist', type='negative')
+                                    return
+
+                                # Load course data
+                                delete_selected_course_id['value'] = delete_course_id_int
+                                course_row = all_courses_df[all_courses_df['course_id'] == delete_course_id_int].iloc[
+                                    0]
+
+                                # Populate input fields
+                                for col in all_courses_df.columns:
+                                    if col != 'course_id':
+                                        delete_course_inputs[col].value = str(course_row[col])
+
+                                ui.notify(f'Loaded course {delete_course_id_int}', type='positive')
+
+
+                            # course ID input with dropdown
+                            with ui.row().classes('w-full items-end gap-2'):
+                                delete_course_inputs['course_id_selector'] = ui.select(
+                                    label='course ID',
+                                    options=sorted(all_courses_df['course_id'].astype(str).tolist()),
+                                    with_input=True
+                                ).classes('flex-grow')
+                                ui.button('Load', on_click=validate_and_load_course_for_delete)
+
+                            ui.separator()
+
+                            # Create input fields for all other columns (read-only)
+                            for col in all_courses_df.columns:
+                                if col != 'course_id':
+                                    delete_course_inputs[col] = ui.input(
+                                        label=col.replace('_', ' ').title()
+                                    ).props('readonly')
+
+                            ui.separator()
+
+                            ui.label('Warning: This action cannot be undone!').classes('text-red-600 font-semibold')
+
+
+                            def delete_course():
+                                if delete_selected_course_id['value'] is None:
+                                    ui.notify('Please load a course first', type='negative')
+                                    return
+
+                                # Delete from API
+                                try:
+                                    api.course_repo.delete(delete_selected_course_id['value'])
+                                except Exception as e:
+                                    ui.notify(f'Error deleting course: {str(e)}', type='negative')
+                                    return
+
+                                # Delete from dataframe
+                                global all_courses_df
+                                all_courses_df = all_courses_df[
+                                    all_courses_df['course_id'] != delete_selected_course_id['value']]
+                                all_courses_df.reset_index(drop=True, inplace=True)
+
+                                # Update the table
+                                tbl_view_courses.rows = all_courses_df.to_dict('records')
+                                tbl_view_courses.update()
+
+                                # Reset dialog state
+                                delete_selected_course_id['value'] = None
+                                for col in all_courses_df.columns:
+                                    if col != 'course_id':
+                                        delete_course_inputs[col].value = ''
+                                delete_course_inputs['course_id_selector'].value = None
+
+                                delete_course_dialog.close()
+                                ui.notify('course deleted successfully', type='positive')
+
+
+                            with ui.row().classes('gap-2 mt-4'):
+                                ui.button('Cancel', on_click=delete_course_dialog.close)
+                                ui.button('Delete', on_click=delete_course, color='red')
+                    with ui.row().classes('gap-4'):
+                        ui.button('Add', on_click=lambda: add_course_dialog.open())
+                        ui.button('Edit', on_click=lambda: edit_course_dialog.open())
+                        ui.button('Delete', on_click=lambda: delete_course_dialog.open(), color='red')
+    with ui.tab_panels(main_tabs, value = tab_departments).classes('w-full'):
         with ui.tab_panel(tab_departments):
             with ui.row().classes('w-full justify-center mb-4'):
                 ui.label('Departmental Records').classes('text-xl')
@@ -1013,7 +1276,270 @@ with ui.column().classes('w-full'):
                         row_key='departments_id',
                     ).classes('w-full border border-black text-black bg-white')
                 with ui.tab_panel(tab_departments_manage).classes('w-full'):
-                    inputs10 = {}
+                    with ui.dialog() as add_department_dialog:
+                        with ui.card().classes('w-[400px]'):
+                            ui.label('Add Department').classes('text-lg font-bold')
+
+                            def get_next_dept_id(df):
+                                if df.empty:
+                                    return 1
+                                return int(df['dept_id'].max()) + 1
+
+
+                            new_department_inputs = {}
+
+                            # Create input fields for all columns
+                            for col in all_departments_df.columns:
+                                if col == 'dept_id':
+                                    # Show the auto-generated student_id as read-only
+                                    new_dept_id = get_next_dept_id(all_departments_df)
+                                    new_department_inputs[col] = ui.input(
+                                        label=f'Department ID',
+                                        value=str(new_dept_id)
+                                    ).props('readonly')
+                                else:
+                                    # Create editable input for other columns
+                                    new_department_inputs[col] = ui.input(
+                                        label=col.replace('_', ' ').title()
+                                    )
+
+
+                            def save_department():
+                                department_data = {col: inp.value for col, inp in new_department_inputs.items()}
+
+                                for col, value in department_data.items():
+                                    if col != 'dept_id' and not value.strip():
+                                        ui.notify(f'{col.replace("_", " ").title()} cannot be blank', type='negative')
+                                        return
+
+                                #print(department_data)
+
+                                department = api.department_repo.create(**department_data)
+                                api.commit()
+
+                                global all_departments_df
+                                all_departments_df = pd.concat([all_departments_df, pd.DataFrame([department_data])],
+                                                            ignore_index=True)
+
+                                add_department_dialog.close()
+                                ui.notify('Department added successfully', type='positive')
+
+                                tbl_view_departments.rows[:] = all_departments_df.to_dict('records')
+                                tbl_view_departments.update()
+
+                            with ui.row().classes('gap-2 mt-4'):
+                                ui.button('Cancel', on_click=add_department_dialog.close)
+                                ui.button('Save', on_click=save_department)
+                    with ui.dialog() as edit_department_dialog:
+                        with ui.card().classes('w-[400px]'):
+                            ui.label('Edit Department').classes('text-lg font-bold')
+
+                            edit_department_inputs = {}
+                            selected_dept_id = {'value': None}  # Store selected ID
+
+
+                            # department ID selector
+                            def validate_and_load_department():
+                                dept_id_value = edit_department_inputs['dept_id_selector'].value
+
+                                if not dept_id_value or not dept_id_value.strip():
+                                    ui.notify('Please enter a department ID', type='negative')
+                                    return
+
+                                # Check if department exists
+                                try:
+                                    dept_id_int = int(dept_id_value)
+                                except ValueError:
+                                    ui.notify('Department ID must be a number', type='negative')
+                                    return
+
+                                if dept_id_int not in all_departments_df['dept_id'].values:
+                                    ui.notify(f'department ID {dept_id_int} does not exist', type='negative')
+                                    return
+
+                                # Load department data
+                                selected_dept_id['value'] = dept_id_int
+                                department_row = all_departments_df[all_departments_df['dept_id'] == dept_id_int].iloc[0]
+
+                                # Populate input fields
+                                for col in all_departments_df.columns:
+                                    if col != 'dept_id':
+                                        edit_department_inputs[col].value = str(department_row[col])
+
+                                ui.notify(f'Loaded department {dept_id_int}', type='positive')
+
+
+                            # department ID input with dropdown
+                            with ui.row().classes('w-full items-end gap-2'):
+                                edit_department_inputs['dept_id_selector'] = ui.select(
+                                    label='Department ID',
+                                    options=sorted(all_departments_df['dept_id'].astype(str).tolist()),
+                                    with_input=True
+                                ).classes('flex-grow')
+                                ui.button('Load', on_click=validate_and_load_department)
+
+                            ui.separator()
+
+                            # Create input fields for all other columns
+                            for col in all_departments_df.columns:
+                                if col != 'dept_id':
+                                    edit_department_inputs[col] = ui.input(
+                                        label=col.replace('_', ' ').title()
+                                    ).props('readonly')  # Start as readonly until department is loaded
+
+
+                            def enable_department_editing():
+                                if selected_dept_id['value'] is None:
+                                    ui.notify('Please load a department first', type='negative')
+                                    return
+
+                                # Enable all fields for editing
+                                for col in all_departments_df.columns:
+                                    if col != 'dept_id':
+                                        edit_department_inputs[col].props(remove='readonly')
+
+
+                            def save_edited_department():
+                                if selected_dept_id['value'] is None:
+                                    ui.notify('Please load a department first', type='negative')
+                                    return
+
+                                # Get the updated values
+                                updated_data = {col: inp.value for col, inp in edit_department_inputs.items() if
+                                                col != 'dept_id_selector'}
+
+                                # Validate that no fields are blank
+                                for col, value in updated_data.items():
+                                    if col != 'dept_id' and (not value or not str(value).strip()):
+                                        ui.notify(f'{col.replace("_", " ").title()} cannot be blank', type='negative')
+                                        return
+
+                                # Update in API
+                                department = api.department_repo.update(selected_dept_id['value'], **updated_data)
+
+                                # Update the dataframe
+                                global all_departments_df
+                                idx = \
+                                    all_departments_df[
+                                        all_departments_df['dept_id'] == selected_dept_id['value']].index[0]
+                                for col, value in updated_data.items():
+                                    all_departments_df.at[idx, col] = value
+
+                                # Update the table
+                                tbl_view_departments.rows = all_departments_df.to_dict('records')
+                                tbl_view_departments.update()
+
+                                edit_department_dialog.close()
+                                ui.notify('Department updated successfully', type='positive')
+
+
+                            with ui.row().classes('gap-2 mt-4'):
+                                ui.button('Cancel', on_click=edit_department_dialog.close)
+                                ui.button('Edit', on_click=enable_department_editing)
+                                ui.button('Save', on_click=save_edited_department)
+                    with ui.dialog() as delete_department_dialog:
+                        with ui.card().classes('w-[400px]'):
+                            ui.label('Delete Department').classes('text-lg font-bold')
+
+                            delete_department_inputs = {}
+                            delete_selected_dept_id = {'value': None}
+
+
+                            # department ID selector
+                            def validate_and_load_department_for_delete():
+                                delete_dept_id_value = delete_department_inputs['dept_id_selector'].value
+
+                                if not delete_dept_id_value or not delete_dept_id_value.strip():
+                                    ui.notify('Please enter a department ID', type='negative')
+                                    return
+
+                                # Check if department exists
+                                try:
+                                    delete_dept_id_int = int(delete_dept_id_value)
+                                except ValueError:
+                                    ui.notify('department ID must be a number', type='negative')
+                                    return
+
+                                if delete_dept_id_int not in all_departments_df['dept_id'].values:
+                                    ui.notify(f'department ID {delete_dept_id_int} does not exist', type='negative')
+                                    return
+
+                                # Load department data
+                                delete_selected_dept_id['value'] = delete_dept_id_int
+                                department_row = all_departments_df[all_departments_df['dept_id'] == delete_dept_id_int].iloc[
+                                    0]
+
+                                # Populate input fields
+                                for col in all_departments_df.columns:
+                                    if col != 'dept_id':
+                                        delete_department_inputs[col].value = str(department_row[col])
+
+                                ui.notify(f'Loaded department {delete_dept_id_int}', type='positive')
+
+
+                            # department ID input with dropdown
+                            with ui.row().classes('w-full items-end gap-2'):
+                                delete_department_inputs['dept_id_selector'] = ui.select(
+                                    label='department ID',
+                                    options=sorted(all_departments_df['dept_id'].astype(str).tolist()),
+                                    with_input=True
+                                ).classes('flex-grow')
+                                ui.button('Load', on_click=validate_and_load_department_for_delete)
+
+                            ui.separator()
+
+                            # Create input fields for all other columns (read-only)
+                            for col in all_departments_df.columns:
+                                if col != 'dept_id':
+                                    delete_department_inputs[col] = ui.input(
+                                        label=col.replace('_', ' ').title()
+                                    ).props('readonly')
+
+                            ui.separator()
+
+                            ui.label('Warning: This action cannot be undone!').classes('text-red-600 font-semibold')
+
+
+                            def delete_department():
+                                if delete_selected_dept_id['value'] is None:
+                                    ui.notify('Please load a department first', type='negative')
+                                    return
+
+                                # Delete from API
+                                try:
+                                    api.department_repo.delete(delete_selected_dept_id['value'])
+                                except Exception as e:
+                                    ui.notify(f'Error deleting department: {str(e)}', type='negative')
+                                    return
+
+                                # Delete from dataframe
+                                global all_departments_df
+                                all_departments_df = all_departments_df[
+                                    all_departments_df['dept_id'] != delete_selected_dept_id['value']]
+                                all_departments_df.reset_index(drop=True, inplace=True)
+
+                                # Update the table
+                                tbl_view_departments.rows = all_departments_df.to_dict('records')
+                                tbl_view_departments.update()
+
+                                # Reset dialog state
+                                delete_selected_dept_id['value'] = None
+                                for col in all_departments_df.columns:
+                                    if col != 'dept_id':
+                                        delete_department_inputs[col].value = ''
+                                delete_department_inputs['dept_id_selector'].value = None
+
+                                delete_department_dialog.close()
+                                ui.notify('department deleted successfully', type='positive')
+
+
+                            with ui.row().classes('gap-2 mt-4'):
+                                ui.button('Cancel', on_click=delete_department_dialog.close)
+                                ui.button('Delete', on_click=delete_department, color='red')
+                    with ui.row().classes('gap-4'):
+                        ui.button('Add', on_click=lambda: add_department_dialog.open())
+                        ui.button('Edit', on_click=lambda: edit_department_dialog.open())
+                        ui.button('Delete', on_click=lambda: delete_department_dialog.open(), color='red')
     with ui.tab_panels(main_tabs, value = tab_rp).classes('w-full'):
         with ui.tab_panel(tab_rp):
             with ui.row().classes('w-full justify-center mb-4'):
