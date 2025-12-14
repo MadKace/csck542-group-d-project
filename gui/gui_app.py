@@ -28,6 +28,12 @@ all_nas_df = pd.DataFrame([staff.as_dict for staff in nas])
 courses = api.course_repo.get_all()
 all_courses_df = pd.DataFrame([course.as_dict for course in courses])
 
+departments = api.department_repo.get_all()
+all_departments_df = pd.DataFrame([department.as_dict for department in departments])
+
+research_projects = api.research_project_repo.get_all()
+all_rp_df = pd.DataFrame([rp.as_dict for rp in research_projects])
+
 #print(all_students_df)
 #print(lecturers)
 #print(courses)
@@ -61,10 +67,10 @@ ui.add_css('''
  #       'programme_id', 'course_id', 'is_required'
  #   ]
 
-def build_view_department():
-    tbl_view_departments = [
-        'dept_id', 'name', 'faculty'
-    ]
+#def build_view_department():
+ #   tbl_view_departments = [
+ #       'dept_id', 'name', 'faculty'
+ #   ]
 
 with ui.column().classes('w-full'):
     with ui.tabs().classes('w-full') as main_tabs:
@@ -73,7 +79,7 @@ with ui.column().classes('w-full'):
         tab_nas = ui.tab('Non-Academic Staff')
         tab_courses = ui.tab('Courses')
         tab_departments = ui.tab('Departments')
-        tab_research_projects = ui.tab('Research Projects')
+        tab_rp = ui.tab('Research Projects')
         tab_qr = ui.tab('Queries and Reports')
     with ui.tab_panels(main_tabs, value = tab_students).classes('w-full'):
         with ui.tab_panel(tab_students):
@@ -187,7 +193,7 @@ with ui.column().classes('w-full'):
                     ).classes('w-full border border-black text-black bg-white')
                 with ui.tab_panel(tab_courses_manage).classes('w-full'):
                     inputs8 = {}
-    with ui.tab_panels(main_tabs, value = tab_research_projects).classes('w-full'):
+    with ui.tab_panels(main_tabs, value = tab_rp).classes('w-full'):
         with ui.tab_panel(tab_departments):
             with ui.row().classes('w-full justify-center mb-4'):
                 ui.label('Departmental Records').classes('text-xl')
@@ -196,20 +202,52 @@ with ui.column().classes('w-full'):
                 tab_departments_manage = ui.tab('Manage Departmental Records')
             with ui.tab_panels(department_ops).classes('w-full'):
                 with ui.tab_panel(tab_departments_view).classes('w-full'):
-                    inputs9 = {}
+                    columns = [
+                        {
+                            'name': col,
+                            'label': col.replace('_', ' ').title(),  # nicer column titles
+                            'field': col,
+                            'sortable': True,
+                        }
+                        for col in all_departments_df.columns
+                    ]
+
+                    rows = all_departments_df.to_dict(orient='records')
+
+                    tbl_view_departments = ui.table(
+                        columns=columns,
+                        rows=rows,
+                        row_key='departments_id',
+                    ).classes('w-full border border-black text-black bg-white')
                 with ui.tab_panel(tab_departments_manage).classes('w-full'):
                     inputs10 = {}
-    with ui.tab_panels(main_tabs, value = tab_research_projects).classes('w-full'):
-        with ui.tab_panel(tab_research_projects):
+    with ui.tab_panels(main_tabs, value = tab_rp).classes('w-full'):
+        with ui.tab_panel(tab_rp):
             with ui.row().classes('w-full justify-center mb-4'):
                 ui.label('Research Projects Records').classes('text-xl')
             with ui.tabs().classes('w-full') as rp_ops:
-                tab_research_projects_view = ui.tab('View Research Projects Records')
-                tab_research_projects_manage = ui.tab('Manage Research Projects Records')
+                tab_rp_view = ui.tab('View Research Projects Records')
+                tab_rp_manage = ui.tab('Manage Research Projects Records')
             with ui.tab_panels(rp_ops).classes('w-full'):
-                with ui.tab_panel(tab_research_projects_view).classes('w-full'):
-                    inputs11 = {}
-                with ui.tab_panel(tab_research_projects_manage).classes('w-full'):
+                with ui.tab_panel(tab_rp_view).classes('w-full'):
+                    columns = [
+                        {
+                            'name': col,
+                            'label': col.replace('_', ' ').title(),  # nicer column titles
+                            'field': col,
+                            'sortable': True,
+                        }
+                        for col in all_rp_df.columns
+                    ]
+
+                    rows = all_rp_df.to_dict(orient='records')
+
+                    tbl_view_rp = ui.table(
+                        columns=columns,
+                        rows=rows,
+                        row_key='project_id',
+                    ).classes('w-full border border-black text-black bg-white')
+                with ui.tab_panel(tab_rp_manage).classes('w-full'):
                     inputs12 = {}
     with ui.tab_panels(main_tabs, value = tab_qr).classes('w-full'):
         with ui.tab_panel(tab_qr):
