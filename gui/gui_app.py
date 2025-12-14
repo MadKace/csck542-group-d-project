@@ -108,10 +108,10 @@ with ui.column().classes('w-full'):
                         row_key='student_id',
                     ).classes('w-full border border-black text-black bg-white')
                 with ui.tab_panel(tab_students_manage).classes('w-full'):
-                    add_inputs = {}
                     with ui.dialog() as add_student_dialog:
                         with ui.card().classes('w-[400px]'):
                             ui.label('Add Student').classes('text-lg font-bold')
+                            add_inputs = {}
 
                             def get_next_student_id(df):
                                 if df.empty:
@@ -399,7 +399,63 @@ with ui.column().classes('w-full'):
                         row_key='lecturer_id',
                     ).classes('w-full border border-black text-black bg-white')
                 with ui.tab_panel(tab_lecturers_manage).classes('w-full'):
-                    inputs4 = {}
+                    with ui.dialog() as add_lecturer_dialog:
+                        with ui.card().classes('w-[400px]'):
+                            ui.label('Add Student').classes('text-lg font-bold')
+                            def get_next_lecturer_id(df):
+                                if df.empty:
+                                    return 1
+                                return int(df['lecturer_id'].max()) + 1
+
+
+                            new_lecturer_inputs = {}
+
+                            # Create input fields for all columns
+                            for col in all_lecturer_df.columns:
+                                if col == 'lecturer_id':
+                                    # Show the auto-generated student_id as read-only
+                                    new_lecturer_id = get_next_lecturer_id(all_lecturer_df)
+                                    new_lecturer_inputs[col] = ui.input(
+                                        label=f'Lecturer ID',
+                                        value=str(new_lecturer_id)
+                                    ).props('readonly')
+                                else:
+                                    # Create editable input for other columns
+                                    new_lecturer_inputs[col] = ui.input(
+                                        label=col.replace('_', ' ').title()
+                                    )
+
+
+                            def save_lecturer():
+                                lecturer_data = {col: inp.value for col, inp in new_lecturer_inputs.items()}
+
+                                for col, value in lecturer_data.items():
+                                    if col != 'lecturer_id' and not value.strip():
+                                        ui.notify(f'{col.replace("_", " ").title()} cannot be blank', type='negative')
+                                        return
+
+                                #print(lecturer_data)
+
+                                lecturer = api.lecturer_repo.create(**lecturer_data)
+                                api.commit()
+
+                                global all_lecturer_df
+                                all_lecturer_df = pd.concat([all_lecturer_df, pd.DataFrame([lecturer_data])],
+                                                            ignore_index=True)
+
+                                add_lecturer_dialog.close()
+                                ui.notify('Lecturer added successfully', type='positive')
+
+                                tbl_view_lecturers.rows[:] = all_lecturer_df.to_dict('records')
+                                tbl_view_lecturers.update()
+
+                            with ui.row().classes('gap-2 mt-4'):
+                                ui.button('Cancel', on_click=add_lecturer_dialog.close)
+                                ui.button('Save', on_click=save_lecturer)
+                    with ui.row().classes('gap-4'):
+                        ui.button('Add', on_click=lambda: add_lecturer_dialog.open())
+                        #ui.button('Edit', on_click=lambda: edit_lecturer_dialog.open())
+                        #ui.button('Delete', on_click=lambda: delete_lecturer_dialog.open(), color='red')
     with ui.tab_panels(main_tabs, value = tab_nas).classes('w-full'):
         with ui.tab_panel(tab_nas):
             with ui.row().classes('w-full justify-center mb-4'):
