@@ -401,7 +401,7 @@ with ui.column().classes('w-full'):
                 with ui.tab_panel(tab_lecturers_manage).classes('w-full'):
                     with ui.dialog() as add_lecturer_dialog:
                         with ui.card().classes('w-[400px]'):
-                            ui.label('Add Student').classes('text-lg font-bold')
+                            ui.label('Add Lecturer').classes('text-lg font-bold')
                             def get_next_lecturer_id(df):
                                 if df.empty:
                                     return 1
@@ -454,7 +454,7 @@ with ui.column().classes('w-full'):
                                 ui.button('Save', on_click=save_lecturer)
                     with ui.row().classes('gap-4'):
                         ui.button('Add', on_click=lambda: add_lecturer_dialog.open())
-                        #ui.button('Edit', on_click=lambda: edit_lecturer_dialog.open())
+                        ui.button('Edit', on_click=lambda: edit_lecturer_dialog.open())
                         #ui.button('Delete', on_click=lambda: delete_lecturer_dialog.open(), color='red')
     with ui.tab_panels(main_tabs, value = tab_nas).classes('w-full'):
         with ui.tab_panel(tab_nas):
