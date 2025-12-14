@@ -108,7 +108,67 @@ with ui.column().classes('w-full'):
                         row_key='student_id',
                     ).classes('w-full border border-black text-black bg-white')
                 with ui.tab_panel(tab_students_manage).classes('w-full'):
-                    inputs1 = {} #Edit Dialogue would go here
+                    add_inputs = {}
+                    with ui.dialog() as add_student_dialog:
+                        with ui.card().classes('w-[400px]'):
+                            ui.label('Add Student').classes('text-lg font-bold')
+
+
+                            def get_next_student_id(df):
+                                if df.empty:
+                                    return 1
+                                return int(df['student_id'].max()) + 1
+
+
+                            new_student_inputs = {}
+
+                            # Create input fields for all columns
+                            for col in all_students_df.columns:
+                                if col == 'student_id':
+                                    # Show the auto-generated student_id as read-only
+                                    new_student_id = get_next_student_id(all_students_df)
+                                    new_student_inputs[col] = ui.input(
+                                        label=f'Student ID',
+                                        value=str(new_student_id)
+                                    ).props('readonly')
+                                else:
+                                    # Create editable input for other columns
+                                    new_student_inputs[col] = ui.input(
+                                        label=col.replace('_', ' ').title()
+                                    )
+
+
+                            def save_student():
+                                student_data = {col: inp.value for col, inp in new_student_inputs.items()}
+
+                                for col, value in student_data.items():
+                                    if col != 'student_id' and not value.strip():
+                                        ui.notify(f'{col.replace("_", " ").title()} cannot be blank', type='negative')
+                                        return
+
+                                #print(student_data)
+
+                                student = api.student_repo.create(**student_data)
+                                api.commit()
+
+                                global all_students_df
+                                all_students_df = pd.concat([all_students_df, pd.DataFrame([student_data])],
+                                                            ignore_index=True)
+
+                                add_student_dialog.close()
+                                ui.notify('Student added successfully', type='positive')
+
+                                tbl_view_students.rows[:] = all_students_df.to_dict('records')
+                                tbl_view_students.update()
+
+                            with ui.row().classes('gap-2 mt-4'):
+                                ui.button('Cancel', on_click=add_student_dialog.close)
+                                ui.button('Save', on_click=save_student)
+
+                    with ui.row().classes('gap-4'):
+                        ui.button('Add', on_click=lambda: add_student_dialog.open())
+                        #ui.button('Edit', on_click=lambda: edit_id_dialog.open())
+                        #ui.button('Delete', on_click=lambda: delete_dialog.open())
     with ui.tab_panels(main_tabs, value = tab_lecturers).classes('w-full'):
         with ui.tab_panel(tab_lecturers):
             with ui.row().classes('w-full justify-center mb-4'):
