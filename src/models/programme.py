@@ -24,7 +24,9 @@ class Programme(Base):
     enrolment_details: Mapped[str | None] = mapped_column(String(500))
 
     # Relationships
-    students: Mapped[list["Student"]] = relationship(back_populates="programme")
+    students: Mapped[list["Student"]] = relationship(
+        back_populates="programme", passive_deletes=True
+    )
     courses: Mapped[list["Course"]] = relationship(
-        secondary="programme_course", back_populates="programmes"
+        secondary="programme_course", back_populates="programmes", passive_deletes=True
     )

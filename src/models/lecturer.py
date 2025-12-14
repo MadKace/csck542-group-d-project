@@ -27,21 +27,25 @@ class Lecturer(Base):
     # Relationships
     department: Mapped["Department | None"] = relationship(back_populates="lecturers")
     qualifications: Mapped[list["LecturerQualification"]] = relationship(
-        back_populates="lecturer"
+        back_populates="lecturer", passive_deletes=True
     )
     expertise_areas: Mapped[list["LecturerExpertise"]] = relationship(
-        back_populates="lecturer"
+        back_populates="lecturer", passive_deletes=True
     )
     research_interests: Mapped[list["LecturerResearchInterest"]] = relationship(
-        back_populates="lecturer"
+        back_populates="lecturer", passive_deletes=True
     )
-    publications: Mapped[list["Publication"]] = relationship(back_populates="lecturer")
-    advisees: Mapped[list["Student"]] = relationship(back_populates="advisor")
+    publications: Mapped[list["Publication"]] = relationship(
+        back_populates="lecturer", passive_deletes=True
+    )
+    advisees: Mapped[list["Student"]] = relationship(
+        back_populates="advisor", passive_deletes=True
+    )
     courses: Mapped[list["Course"]] = relationship(
-        secondary="lecturer_course", back_populates="lecturers"
+        secondary="lecturer_course", back_populates="lecturers", passive_deletes=True
     )
     research_project: Mapped["ResearchProject | None"] = relationship(
-        back_populates="head_lecturer"
+        back_populates="head_lecturer", passive_deletes=True
     )
 
 

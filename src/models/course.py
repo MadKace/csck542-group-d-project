@@ -30,22 +30,27 @@ class Course(Base):
 
     # Relationships
     department: Mapped["Department | None"] = relationship(back_populates="courses")
-    materials: Mapped[list["CourseMaterial"]] = relationship(back_populates="course")
-    grades: Mapped[list["StudentGrade"]] = relationship(back_populates="course")
+    materials: Mapped[list["CourseMaterial"]] = relationship(
+        back_populates="course", passive_deletes=True
+    )
+    grades: Mapped[list["StudentGrade"]] = relationship(
+        back_populates="course", passive_deletes=True
+    )
     students: Mapped[list["Student"]] = relationship(
-        secondary="student_course", back_populates="courses"
+        secondary="student_course", back_populates="courses", passive_deletes=True
     )
     lecturers: Mapped[list["Lecturer"]] = relationship(
-        secondary="lecturer_course", back_populates="courses"
+        secondary="lecturer_course", back_populates="courses", passive_deletes=True
     )
     programmes: Mapped[list["Programme"]] = relationship(
-        secondary="programme_course", back_populates="courses"
+        secondary="programme_course", back_populates="courses", passive_deletes=True
     )
     prerequisites: Mapped[list["Course"]] = relationship(
         secondary="course_prerequisite",
         primaryjoin="Course.course_id == course_prerequisite.c.course_id",
         secondaryjoin="Course.course_id == course_prerequisite.c.prerequisite_id",
         backref="required_for",
+        passive_deletes=True,
     )
 
 

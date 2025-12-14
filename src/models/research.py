@@ -33,14 +33,18 @@ class ResearchProject(Base):
         back_populates="research_projects"
     )
     funding_sources: Mapped[list["ProjectFunding"]] = relationship(
-        back_populates="project"
+        back_populates="project", passive_deletes=True
     )
-    outcomes: Mapped[list["ProjectOutcome"]] = relationship(back_populates="project")
+    outcomes: Mapped[list["ProjectOutcome"]] = relationship(
+        back_populates="project", passive_deletes=True
+    )
     publications: Mapped[list["ProjectPublication"]] = relationship(
-        back_populates="project"
+        back_populates="project", passive_deletes=True
     )
     student_members: Mapped[list["Student"]] = relationship(
-        secondary="research_project_member", back_populates="research_projects"
+        secondary="research_project_member",
+        back_populates="research_projects",
+        passive_deletes=True,
     )
 
 
