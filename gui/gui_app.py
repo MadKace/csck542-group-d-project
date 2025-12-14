@@ -367,7 +367,6 @@ with ui.column().classes('w-full'):
                             with ui.row().classes('gap-2 mt-4'):
                                 ui.button('Cancel', on_click=delete_student_dialog.close)
                                 ui.button('Delete', on_click=delete_student, color='red')
-
                     with ui.row().classes('gap-4'):
                         ui.button('Add', on_click=lambda: add_student_dialog.open())
                         ui.button('Edit', on_click=lambda: edit_student_dialog.open())
@@ -455,6 +454,8 @@ with ui.column().classes('w-full'):
                                 ui.button('Save', on_click=save_lecturer)
                     with ui.dialog() as edit_lecturer_dialog:
                         with ui.card().classes('w-[400px]'):
+                            ui.label('Edit Lecturer').classes('text-lg font-bold')
+
                             edit_lecturer_inputs = {}
                             selected_lecturer_id = {'value': None}  # Store selected ID
 
@@ -558,10 +559,110 @@ with ui.column().classes('w-full'):
                                 ui.button('Cancel', on_click=edit_lecturer_dialog.close)
                                 ui.button('Edit', on_click=enable_lecturer_editing)
                                 ui.button('Save', on_click=save_edited_lecturer)
+                    with ui.dialog() as delete_lecturer_dialog:
+                        with ui.card().classes('w-[400px]'):
+                            ui.label('Delete Lecturer').classes('text-lg font-bold')
+
+                        delete_lecturer_inputs = {}
+                        delete_selected_lecturer_id = {'value': None}
+
+
+                        # lecturer ID selector
+                        def validate_and_load_lecturer_for_delete():
+                            delete_lecturer_id_value = delete_lecturer_inputs['lecturer_id_selector'].value
+
+                            if not delete_lecturer_id_value or not delete_lecturer_id_value.strip():
+                                ui.notify('Please enter a lecturer ID', type='negative')
+                                return
+
+                            # Check if lecturer exists
+                            try:
+                                delete_lecturer_id_int = int(delete_lecturer_id_value)
+                            except ValueError:
+                                ui.notify('lecturer ID must be a number', type='negative')
+                                return
+
+                            if delete_lecturer_id_int not in all_lecturers_df['lecturer_id'].values:
+                                ui.notify(f'lecturer ID {delete_lecturer_id_int} does not exist', type='negative')
+                                return
+
+                            # Load lecturer data
+                            delete_selected_lecturer_id['value'] = delete_lecturer_id_int
+                            lecturer_row = all_lecturers_df[all_lecturers_df['lecturer_id'] == delete_lecturer_id_int].iloc[
+                                0]
+
+                            # Populate input fields
+                            for col in all_lecturers_df.columns:
+                                if col != 'lecturer_id':
+                                    delete_lecturer_inputs[col].value = str(lecturer_row[col])
+
+                            ui.notify(f'Loaded lecturer {delete_lecturer_id_int}', type='positive')
+
+
+                        # lecturer ID input with dropdown
+                        with ui.row().classes('w-full items-end gap-2'):
+                            delete_lecturer_inputs['lecturer_id_selector'] = ui.select(
+                                label='lecturer ID',
+                                options=sorted(all_lecturers_df['lecturer_id'].astype(str).tolist()),
+                                with_input=True
+                            ).classes('flex-grow')
+                            ui.button('Load', on_click=validate_and_load_lecturer_for_delete)
+
+                        ui.separator()
+
+                        # Create input fields for all other columns (read-only)
+                        for col in all_lecturers_df.columns:
+                            if col != 'lecturer_id':
+                                delete_lecturer_inputs[col] = ui.input(
+                                    label=col.replace('_', ' ').title()
+                                ).props('readonly')
+
+                        ui.separator()
+
+                        ui.label('Warning: This action cannot be undone!').classes('text-red-600 font-semibold')
+
+
+                        def delete_lecturer():
+                            if delete_selected_lecturer_id['value'] is None:
+                                ui.notify('Please load a lecturer first', type='negative')
+                                return
+
+                            # Delete from API
+                            try:
+                                api.lecturer_repo.delete(delete_selected_lecturer_id['value'])
+                            except Exception as e:
+                                ui.notify(f'Error deleting lecturer: {str(e)}', type='negative')
+                                return
+
+                            # Delete from dataframe
+                            global all_lecturers_df
+                            all_lecturers_df = all_lecturers_df[
+                                all_lecturers_df['lecturer_id'] != delete_selected_lecturer_id['value']]
+                            all_lecturers_df.reset_index(drop=True, inplace=True)
+
+                            # Update the table
+                            tbl_view_lecturers.rows = all_lecturers_df.to_dict('records')
+                            tbl_view_lecturers.update()
+
+                            # Reset dialog state
+                            delete_selected_lecturer_id['value'] = None
+                            for col in all_lecturers_df.columns:
+                                if col != 'lecturer_id':
+                                    delete_lecturer_inputs[col].value = ''
+                            delete_lecturer_inputs['lecturer_id_selector'].value = None
+
+                            delete_lecturer_dialog.close()
+                            ui.notify('lecturer deleted successfully', type='positive')
+
+
+                        with ui.row().classes('gap-2 mt-4'):
+                            ui.button('Cancel', on_click=delete_lecturer_dialog.close)
+                            ui.button('Delete', on_click=delete_lecturer, color='red')
+
                     with ui.row().classes('gap-4'):
                         ui.button('Add', on_click=lambda: add_lecturer_dialog.open())
                         ui.button('Edit', on_click=lambda: edit_lecturer_dialog.open())
-                        #ui.button('Delete', on_click=lambda: delete_lecturer_dialog.open(), color='red')
+                        ui.button('Delete', on_click=lambda: delete_lecturer_dialog.open(), color='red')
     with ui.tab_panels(main_tabs, value = tab_nas).classes('w-full'):
         with ui.tab_panel(tab_nas):
             with ui.row().classes('w-full justify-center mb-4'):
