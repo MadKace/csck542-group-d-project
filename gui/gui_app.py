@@ -113,7 +113,6 @@ with ui.column().classes('w-full'):
                         with ui.card().classes('w-[400px]'):
                             ui.label('Add Student').classes('text-lg font-bold')
 
-
                             def get_next_student_id(df):
                                 if df.empty:
                                     return 1
@@ -164,10 +163,120 @@ with ui.column().classes('w-full'):
                             with ui.row().classes('gap-2 mt-4'):
                                 ui.button('Cancel', on_click=add_student_dialog.close)
                                 ui.button('Save', on_click=save_student)
+                    with ui.dialog() as edit_student_dialog:
+                        with ui.card().classes('w-[400px]'):
+                            ui.label('Edit Student').classes('text-lg font-bold')
 
+                            edit_student_inputs = {}
+                            selected_student_id = {'value': None}  # Store selected ID
+
+
+                            # Student ID selector
+                            def validate_and_load_student():
+                                student_id_value = edit_student_inputs['student_id_selector'].value
+
+                                if not student_id_value or not student_id_value.strip():
+                                    ui.notify('Please enter a Student ID', type='negative')
+                                    return
+
+                                # Check if student exists
+                                try:
+                                    student_id_int = int(student_id_value)
+                                except ValueError:
+                                    ui.notify('Student ID must be a number', type='negative')
+                                    return
+
+                                if student_id_int not in all_students_df['student_id'].values:
+                                    ui.notify(f'Student ID {student_id_int} does not exist', type='negative')
+                                    return
+
+                                # Load student data
+                                selected_student_id['value'] = student_id_int
+                                student_row = all_students_df[all_students_df['student_id'] == student_id_int].iloc[0]
+
+                                # Populate input fields
+                                for col in all_students_df.columns:
+                                    if col != 'student_id':
+                                        edit_student_inputs[col].value = str(student_row[col])
+
+                                ui.notify(f'Loaded student {student_id_int}', type='positive')
+
+
+                            # Student ID input with dropdown
+                            with ui.row().classes('w-full items-end gap-2'):
+                                edit_student_inputs['student_id_selector'] = ui.select(
+                                    label='Student ID',
+                                    options=sorted(all_students_df['student_id'].astype(str).tolist()),
+                                    with_input=True
+                                ).classes('flex-grow')
+                                ui.button('Load', on_click=validate_and_load_student)
+
+                            ui.separator()
+
+                            # Create input fields for all other columns
+                            for col in all_students_df.columns:
+                                if col != 'student_id':
+                                    edit_student_inputs[col] = ui.input(
+                                        label=col.replace('_', ' ').title()
+                                    ).props('readonly')  # Start as readonly until student is loaded
+
+
+                            def enable_editing():
+                                if selected_student_id['value'] is None:
+                                    ui.notify('Please load a student first', type='negative')
+                                    return
+
+                                # Enable all fields for editing
+                                for col in all_students_df.columns:
+                                    if col != 'student_id':
+                                        edit_student_inputs[col].props(remove='readonly')
+
+
+                            def save_edited_student():
+                                if selected_student_id['value'] is None:
+                                    ui.notify('Please load a student first', type='negative')
+                                    return
+
+                                # Get the updated values
+                                """updated_data = {col: inp.value for col, inp in edit_student_inputs.items() if
+                                
+                                                col != 'student_id_selector'}
+                                updated_data['student_id'] = selected_student_id['value']
+                                """
+                                updated_data = {col: inp.value for col, inp in edit_student_inputs.items() if
+                                                col != 'student_id_selector'}
+
+                                # Validate that no fields are blank
+                                for col, value in updated_data.items():
+                                    if col != 'student_id' and (not value or not str(value).strip()):
+                                        ui.notify(f'{col.replace("_", " ").title()} cannot be blank', type='negative')
+                                        return
+
+                                # Update in API
+                                student = api.student_repo.update(selected_student_id['value'], **updated_data)
+
+                                # Update the dataframe
+                                global all_students_df
+                                idx = \
+                                all_students_df[all_students_df['student_id'] == selected_student_id['value']].index[0]
+                                for col, value in updated_data.items():
+                                    all_students_df.at[idx, col] = value
+
+                                # Update the table
+                                tbl_view_students.rows = all_students_df.to_dict('records')
+                                tbl_view_students.update()
+
+                                edit_student_dialog.close()
+                                ui.notify('Student updated successfully', type='positive')
+
+
+                            with ui.row().classes('gap-2 mt-4'):
+                                ui.button('Cancel', on_click=edit_student_dialog.close)
+                                ui.button('Edit', on_click=enable_editing)
+                                ui.button('Save', on_click=save_edited_student)
                     with ui.row().classes('gap-4'):
                         ui.button('Add', on_click=lambda: add_student_dialog.open())
-                        #ui.button('Edit', on_click=lambda: edit_id_dialog.open())
+                        ui.button('Edit', on_click=lambda: edit_student_dialog.open())
                         #ui.button('Delete', on_click=lambda: delete_dialog.open())
     with ui.tab_panels(main_tabs, value = tab_lecturers).classes('w-full'):
         with ui.tab_panel(tab_lecturers):
