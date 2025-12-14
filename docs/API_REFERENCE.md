@@ -209,6 +209,16 @@ api.commit()
 
 All models are SQLAlchemy ORM entities using `Mapped[]` type hints.
 
+### Common Property
+
+All models have an `as_dict` property that returns the model's attributes as a dictionary:
+
+```python
+student = api.student_repo.get_by_id(1)
+print(student.as_dict)
+# {'student_id': 1, 'name': 'John Doe', 'date_of_birth': '2000-01-01', ...}
+```
+
 ### Student
 | Field | Type |
 |-------|------|
