@@ -1,5 +1,34 @@
 
 from nicegui import ui
+import pandas as pd
+
+from src.database import get_engine
+from src.models import Base
+from src.services import APIService
+
+def init_database():
+    engine = get_engine()
+    Base.metadata.create_all(engine)
+    print("Tbl created")
+
+if __name__ == "__main__":
+    init_database()
+
+api = APIService()
+
+students = api.student_repo.get_all()
+all_students_df = pd.DataFrame([student.as_dict for student in students])
+
+lecturers = api.lecturer_repo.get_all()
+all_lecturer_df = pd.DataFrame([lecturer.as_dict for lecturer in lecturers])
+
+courses = api.course_repo.get_all()
+all_courses_df = pd.DataFrame([lecturer.as_dict for lecturer in lecturers])
+
+
+#print(all_students_df)
+#print(lecturers)
+#print(courses)
 
 ui.add_css('''
     @layer utilities {
@@ -53,20 +82,25 @@ with ui.column().classes('w-full'):
                 tab_students_manage = ui.tab('Manage Student Records')
             with ui.tab_panels(student_ops).classes('w-full'):
                 with ui.tab_panel(tab_students_view).classes('w-full'):
-                    columns_view_students = [
-                        'student_id', 'programme_id', 'advisor_id', 'name', 'date_of_birth', 'contact_info',
-                        'year_of_study',
-                        'graduation_status'
+                    columns = [
+                        {
+                            'name': col,
+                            'label': col.replace('_', ' ').title(),  # nicer column titles
+                            'field': col,
+                            'sortable': True,
+                        }
+                        for col in all_students_df.columns
                     ]
-                    tbl_students = ui.table(
-                        columns=[
-                            {'name': f, 'label': f, 'field': f} for f in columns_view_students],
-                        rows=[],
-                        row_key =  'student_id').classes(
-                        'w-full border border-black text-black bg-white'
-                    )
-                with ui.tab_panel(tab_students_view).classes('w-full'):
-                    inputs1 = {}
+
+                    rows = all_students_df.to_dict(orient='records')
+
+                    tbl_view_students = ui.table(
+                        columns=columns,
+                        rows=rows,
+                        row_key='student_id',
+                    ).classes('w-full border border-black text-black bg-white')
+                with ui.tab_panel(tab_students_manage).classes('w-full'):
+                    inputs1 = {} #Edit Dialogue would go here
     with ui.tab_panels(main_tabs, value = tab_lecturers).classes('w-full'):
         with ui.tab_panel(tab_lecturers):
             with ui.row().classes('w-full justify-center mb-4'):
@@ -76,7 +110,23 @@ with ui.column().classes('w-full'):
                 tab_lecturers_manage = ui.tab('Manage Lecturer Records')
             with ui.tab_panels(lecturer_ops).classes('w-full'):
                 with ui.tab_panel(tab_lecturers_view).classes('w-full'):
-                    inputs3 = {}
+                    columns = [
+                        {
+                            'name': col,
+                            'label': col.replace('_', ' ').title(),  # nicer column titles
+                            'field': col,
+                            'sortable': True,
+                        }
+                        for col in all_lecturer_df.columns
+                    ]
+
+                    rows = all_lecturer_df.to_dict(orient='records')
+
+                    tbl_view_lecturers = ui.table(
+                        columns=columns,
+                        rows=rows,
+                        row_key='lecturer_id',
+                    ).classes('w-full border border-black text-black bg-white')
                 with ui.tab_panel(tab_lecturers_manage).classes('w-full'):
                     inputs4 = {}
     with ui.tab_panels(main_tabs, value = tab_nas).classes('w-full'):
