@@ -34,10 +34,6 @@ all_departments_df = pd.DataFrame([department.as_dict for department in departme
 research_projects = api.research_project_repo.get_all()
 all_projects_df = pd.DataFrame([rp.as_dict for rp in research_projects])
 
-#print(all_students_df)
-#print(lecturers)
-#print(courses)
-
 ui.add_css('''
     @layer utilities {
        .standard-btn {
@@ -45,32 +41,6 @@ ui.add_css('''
         }
     }
 ''')
-
-#def build_view_students():
-    #columns_view_students = [
-    #    'student_id', 'programme_id', 'advisor_id', 'name', 'date_of_birth', 'contact_info', 'year_of_study',
-    #    'graduation_status'
-    #]
-
-#def build_view_lectures():
-    #tbl_view_lectures = [
-    #    'lecturer_id', 'dept_id', 'name', 'course_load'
-    #]
-
-#def build_view_staff():
-    #tbl_view_staff = [
-    #    'staff_id', 'dept_id', 'name', 'job_title', 'employment_type', 'contract_details', 'salary', 'emergency_contact'
-    #]
-
-#def build_view_courses():
- #   tbl_view_courses = [
- #       'programme_id', 'course_id', 'is_required'
- #   ]
-
-#def build_view_department():
- #   tbl_view_departments = [
- #       'dept_id', 'name', 'faculty'
- #   ]
 
 with ui.column().classes('w-full'):
     with ui.tabs().classes('w-full') as main_tabs:
@@ -249,6 +219,7 @@ with ui.column().classes('w-full'):
 
                                 # Update in API
                                 student = api.student_repo.update(selected_student_id['value'], **updated_data)
+                                api.commit()
 
                                 # Update the dataframe
                                 global all_students_df
@@ -339,6 +310,7 @@ with ui.column().classes('w-full'):
                                 # Delete from API
                                 try:
                                     api.student_repo.delete(delete_selected_student_id['value'])
+                                    api.commit()
                                 except Exception as e:
                                     ui.notify(f'Error deleting student: {str(e)}', type='negative')
                                     return
@@ -538,6 +510,7 @@ with ui.column().classes('w-full'):
 
                                 # Update in API
                                 lecturer = api.lecturer_repo.update(selected_lecturer_id['value'], **updated_data)
+                                api.commit()
 
                                 # Update the dataframe
                                 global all_lecturers_df
@@ -630,6 +603,7 @@ with ui.column().classes('w-full'):
                                 # Delete from API
                                 try:
                                     api.lecturer_repo.delete(delete_selected_lecturer_id['value'])
+                                    api.commit()
                                 except Exception as e:
                                     ui.notify(f'Error deleting lecturer: {str(e)}', type='negative')
                                     return
@@ -832,6 +806,7 @@ with ui.column().classes('w-full'):
 
                                 # Update in API
                                 staff = api.staff_repo.update(selected_staff_id['value'], **updated_data)
+                                api.commit()
 
                                 # Update the dataframe
                                 global all_staff_df
@@ -925,6 +900,7 @@ with ui.column().classes('w-full'):
                                 # Delete from API
                                 try:
                                     api.staff_repo.delete(delete_selected_staff_id['value'])
+                                    api.commit()
                                 except Exception as e:
                                     ui.notify(f'Error deleting Staff: {str(e)}', type='negative')
                                     return
@@ -1125,6 +1101,7 @@ with ui.column().classes('w-full'):
 
                                 # Update in API
                                 course = api.course_repo.update(selected_course_id['value'], **updated_data)
+                                api.commit()
 
                                 # Update the dataframe
                                 global all_courses_df
@@ -1217,6 +1194,7 @@ with ui.column().classes('w-full'):
                                 # Delete from API
                                 try:
                                     api.course_repo.delete(delete_selected_course_id['value'])
+                                    api.commit()
                                 except Exception as e:
                                     ui.notify(f'Error deleting course: {str(e)}', type='negative')
                                     return
@@ -1416,6 +1394,7 @@ with ui.column().classes('w-full'):
 
                                 # Update in API
                                 department = api.department_repo.update(selected_dept_id['value'], **updated_data)
+                                api.commit()
 
                                 # Update the dataframe
                                 global all_departments_df
@@ -1508,6 +1487,7 @@ with ui.column().classes('w-full'):
                                 # Delete from API
                                 try:
                                     api.department_repo.delete(delete_selected_dept_id['value'])
+                                    api.commit()
                                 except Exception as e:
                                     ui.notify(f'Error deleting department: {str(e)}', type='negative')
                                     return
@@ -1707,6 +1687,7 @@ with ui.column().classes('w-full'):
 
                                 # Update in API
                                 project = api.research_project_repo.update(selected_project_id['value'], **updated_data)
+                                api.commit()
 
                                 # Update the dataframe
                                 global all_projects_df
@@ -1799,6 +1780,7 @@ with ui.column().classes('w-full'):
                                 # Delete from API
                                 try:
                                     api.research_project_repo.delete(delete_selected_project_id['value'])
+                                    api.commit()
                                 except Exception as e:
                                     ui.notify(f'Error deleting project: {str(e)}', type='negative')
                                     return
