@@ -20,7 +20,7 @@ students = api.student_repo.get_all()
 all_students_df = pd.DataFrame([student.as_dict for student in students])
 
 lecturers = api.lecturer_repo.get_all()
-all_lecturer_df = pd.DataFrame([lecturer.as_dict for lecturer in lecturers])
+all_lecturers_df = pd.DataFrame([lecturer.as_dict for lecturer in lecturers])
 
 nas = api.staff_repo.get_all()
 all_nas_df = pd.DataFrame([staff.as_dict for staff in nas])
@@ -388,10 +388,10 @@ with ui.column().classes('w-full'):
                             'field': col,
                             'sortable': True,
                         }
-                        for col in all_lecturer_df.columns
+                        for col in all_lecturers_df.columns
                     ]
 
-                    rows = all_lecturer_df.to_dict(orient='records')
+                    rows = all_lecturers_df.to_dict(orient='records')
 
                     tbl_view_lecturers = ui.table(
                         columns=columns,
@@ -402,6 +402,7 @@ with ui.column().classes('w-full'):
                     with ui.dialog() as add_lecturer_dialog:
                         with ui.card().classes('w-[400px]'):
                             ui.label('Add Lecturer').classes('text-lg font-bold')
+
                             def get_next_lecturer_id(df):
                                 if df.empty:
                                     return 1
@@ -411,10 +412,10 @@ with ui.column().classes('w-full'):
                             new_lecturer_inputs = {}
 
                             # Create input fields for all columns
-                            for col in all_lecturer_df.columns:
+                            for col in all_lecturers_df.columns:
                                 if col == 'lecturer_id':
                                     # Show the auto-generated student_id as read-only
-                                    new_lecturer_id = get_next_lecturer_id(all_lecturer_df)
+                                    new_lecturer_id = get_next_lecturer_id(all_lecturers_df)
                                     new_lecturer_inputs[col] = ui.input(
                                         label=f'Lecturer ID',
                                         value=str(new_lecturer_id)
@@ -439,19 +440,124 @@ with ui.column().classes('w-full'):
                                 lecturer = api.lecturer_repo.create(**lecturer_data)
                                 api.commit()
 
-                                global all_lecturer_df
-                                all_lecturer_df = pd.concat([all_lecturer_df, pd.DataFrame([lecturer_data])],
+                                global all_lecturers_df
+                                all_lecturers_df = pd.concat([all_lecturers_df, pd.DataFrame([lecturer_data])],
                                                             ignore_index=True)
 
                                 add_lecturer_dialog.close()
                                 ui.notify('Lecturer added successfully', type='positive')
 
-                                tbl_view_lecturers.rows[:] = all_lecturer_df.to_dict('records')
+                                tbl_view_lecturers.rows[:] = all_lecturers_df.to_dict('records')
                                 tbl_view_lecturers.update()
 
                             with ui.row().classes('gap-2 mt-4'):
                                 ui.button('Cancel', on_click=add_lecturer_dialog.close)
                                 ui.button('Save', on_click=save_lecturer)
+                    with ui.dialog() as edit_lecturer_dialog:
+                        with ui.card().classes('w-[400px]'):
+                            edit_lecturer_inputs = {}
+                            selected_lecturer_id = {'value': None}  # Store selected ID
+
+
+                            # lecturer ID selector
+                            def validate_and_load_lecturer():
+                                lecturer_id_value = edit_lecturer_inputs['lecturer_id_selector'].value
+
+                                if not lecturer_id_value or not lecturer_id_value.strip():
+                                    ui.notify('Please enter a lecturer ID', type='negative')
+                                    return
+
+                                # Check if lecturer exists
+                                try:
+                                    lecturer_id_int = int(lecturer_id_value)
+                                except ValueError:
+                                    ui.notify('Lecturer ID must be a number', type='negative')
+                                    return
+
+                                if lecturer_id_int not in all_lecturers_df['lecturer_id'].values:
+                                    ui.notify(f'lecturer ID {lecturer_id_int} does not exist', type='negative')
+                                    return
+
+                                # Load lecturer data
+                                selected_lecturer_id['value'] = lecturer_id_int
+                                lecturer_row = all_lecturers_df[all_lecturers_df['lecturer_id'] == lecturer_id_int].iloc[0]
+
+                                # Populate input fields
+                                for col in all_lecturers_df.columns:
+                                    if col != 'lecturer_id':
+                                        edit_lecturer_inputs[col].value = str(lecturer_row[col])
+
+                                ui.notify(f'Loaded lecturer {lecturer_id_int}', type='positive')
+
+
+                            # lecturer ID input with dropdown
+                            with ui.row().classes('w-full items-end gap-2'):
+                                edit_lecturer_inputs['lecturer_id_selector'] = ui.select(
+                                    label='Lecturer ID',
+                                    options=sorted(all_lecturers_df['lecturer_id'].astype(str).tolist()),
+                                    with_input=True
+                                ).classes('flex-grow')
+                                ui.button('Load', on_click=validate_and_load_lecturer)
+
+                            ui.separator()
+
+                            # Create input fields for all other columns
+                            for col in all_lecturers_df.columns:
+                                if col != 'lecturer_id':
+                                    edit_lecturer_inputs[col] = ui.input(
+                                        label=col.replace('_', ' ').title()
+                                    ).props('readonly')  # Start as readonly until lecturer is loaded
+
+
+                            def enable_lecturer_editing():
+                                if selected_lecturer_id['value'] is None:
+                                    ui.notify('Please load a lecturer first', type='negative')
+                                    return
+
+                                # Enable all fields for editing
+                                for col in all_lecturers_df.columns:
+                                    if col != 'lecturer_id':
+                                        edit_lecturer_inputs[col].props(remove='readonly')
+
+
+                            def save_edited_lecturer():
+                                if selected_lecturer_id['value'] is None:
+                                    ui.notify('Please load a lecturer first', type='negative')
+                                    return
+
+                                # Get the updated values
+                                updated_data = {col: inp.value for col, inp in edit_lecturer_inputs.items() if
+                                                col != 'lecturer_id_selector'}
+
+                                # Validate that no fields are blank
+                                for col, value in updated_data.items():
+                                    if col != 'lecturer_id' and (not value or not str(value).strip()):
+                                        ui.notify(f'{col.replace("_", " ").title()} cannot be blank', type='negative')
+                                        return
+
+                                # Update in API
+                                lecturer = api.lecturer_repo.update(selected_lecturer_id['value'], **updated_data)
+
+                                # Update the dataframe
+                                global all_lecturers_df
+                                idx = \
+                                    all_lecturers_df[
+                                        all_lecturers_df['lecturer_id'] == selected_lecturer_id['value']].index[0]
+                                for col, value in updated_data.items():
+                                    all_lecturers_df.at[idx, col] = value
+
+                                # Update the table
+                                tbl_view_lecturers.rows = all_lecturers_df.to_dict('records')
+                                tbl_view_lecturers.update()
+
+                                edit_lecturer_dialog.close()
+                                ui.notify('Lecturer updated successfully', type='positive')
+
+
+                            with ui.row().classes('gap-2 mt-4'):
+                                ui.button('Cancel', on_click=edit_lecturer_dialog.close)
+                                ui.button('Edit', on_click=enable_lecturer_editing)
+                                ui.button('Save', on_click=save_edited_lecturer)
                     with ui.row().classes('gap-4'):
                         ui.button('Add', on_click=lambda: add_lecturer_dialog.open())
                         ui.button('Edit', on_click=lambda: edit_lecturer_dialog.open())
