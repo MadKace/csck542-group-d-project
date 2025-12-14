@@ -32,7 +32,7 @@ departments = api.department_repo.get_all()
 all_departments_df = pd.DataFrame([department.as_dict for department in departments])
 
 research_projects = api.research_project_repo.get_all()
-all_rp_df = pd.DataFrame([rp.as_dict for rp in research_projects])
+all_projects_df = pd.DataFrame([rp.as_dict for rp in research_projects])
 
 #print(all_students_df)
 #print(lecturers)
@@ -1556,18 +1556,281 @@ with ui.column().classes('w-full'):
                             'field': col,
                             'sortable': True,
                         }
-                        for col in all_rp_df.columns
+                        for col in all_projects_df.columns
                     ]
 
-                    rows = all_rp_df.to_dict(orient='records')
+                    rows = all_projects_df.to_dict(orient='records')
 
-                    tbl_view_rp = ui.table(
+                    tbl_view_projects = ui.table(
                         columns=columns,
                         rows=rows,
                         row_key='project_id',
                     ).classes('w-full border border-black text-black bg-white')
                 with ui.tab_panel(tab_rp_manage).classes('w-full'):
-                    inputs12 = {}
+                    with ui.dialog() as add_project_dialog:
+                        with ui.card().classes('w-[400px]'):
+                            ui.label('Add Project').classes('text-lg font-bold')
+
+                            def get_next_project_id(df):
+                                if df.empty:
+                                    return 1
+                                return int(df['project_id'].max()) + 1
+
+
+                            new_project_inputs = {}
+
+                            # Create input fields for all columns
+                            for col in all_projects_df.columns:
+                                if col == 'project_id':
+                                    # Show the auto-generated student_id as read-only
+                                    new_project_id = get_next_project_id(all_projects_df)
+                                    new_project_inputs[col] = ui.input(
+                                        label=f'Project ID',
+                                        value=str(new_project_id)
+                                    ).props('readonly')
+                                else:
+                                    # Create editable input for other columns
+                                    new_project_inputs[col] = ui.input(
+                                        label=col.replace('_', ' ').title()
+                                    )
+
+
+                            def save_project():
+                                project_data = {col: inp.value for col, inp in new_project_inputs.items()}
+
+                                for col, value in project_data.items():
+                                    if col != 'project_id' and not value.strip():
+                                        ui.notify(f'{col.replace("_", " ").title()} cannot be blank', type='negative')
+                                        return
+
+                                #print(project_data)
+
+                                project = api.research_project_repo.create(**project_data)
+                                api.commit()
+
+                                global all_projects_df
+                                all_projects_df = pd.concat([all_projects_df, pd.DataFrame([project_data])],
+                                                            ignore_index=True)
+
+                                add_project_dialog.close()
+                                ui.notify('Project added successfully', type='positive')
+
+                                tbl_view_projects.rows[:] = all_projects_df.to_dict('records')
+                                tbl_view_projects.update()
+
+                            with ui.row().classes('gap-2 mt-4'):
+                                ui.button('Cancel', on_click=add_project_dialog.close)
+                                ui.button('Save', on_click=save_project)
+                    with ui.dialog() as edit_project_dialog:
+                        with ui.card().classes('w-[400px]'):
+                            ui.label('Edit Project').classes('text-lg font-bold')
+
+                            edit_project_inputs = {}
+                            selected_project_id = {'value': None}  # Store selected ID
+
+
+                            # project ID selector
+                            def validate_and_load_project():
+                                project_id_value = edit_project_inputs['project_id_selector'].value
+
+                                if not project_id_value or not project_id_value.strip():
+                                    ui.notify('Please enter a project ID', type='negative')
+                                    return
+
+                                # Check if project exists
+                                try:
+                                    project_id_int = int(project_id_value)
+                                except ValueError:
+                                    ui.notify('Project ID must be a number', type='negative')
+                                    return
+
+                                if project_id_int not in all_projects_df['project_id'].values:
+                                    ui.notify(f'project ID {project_id_int} does not exist', type='negative')
+                                    return
+
+                                # Load project data
+                                selected_project_id['value'] = project_id_int
+                                project_row = all_projects_df[all_projects_df['project_id'] == project_id_int].iloc[0]
+
+                                # Populate input fields
+                                for col in all_projects_df.columns:
+                                    if col != 'project_id':
+                                        edit_project_inputs[col].value = str(project_row[col])
+
+                                ui.notify(f'Loaded project {project_id_int}', type='positive')
+
+
+                            # project ID input with dropdown
+                            with ui.row().classes('w-full items-end gap-2'):
+                                edit_project_inputs['project_id_selector'] = ui.select(
+                                    label='Project ID',
+                                    options=sorted(all_projects_df['project_id'].astype(str).tolist()),
+                                    with_input=True
+                                ).classes('flex-grow')
+                                ui.button('Load', on_click=validate_and_load_project)
+
+                            ui.separator()
+
+                            # Create input fields for all other columns
+                            for col in all_projects_df.columns:
+                                if col != 'project_id':
+                                    edit_project_inputs[col] = ui.input(
+                                        label=col.replace('_', ' ').title()
+                                    ).props('readonly')  # Start as readonly until project is loaded
+
+
+                            def enable_project_editing():
+                                if selected_project_id['value'] is None:
+                                    ui.notify('Please load a project first', type='negative')
+                                    return
+
+                                # Enable all fields for editing
+                                for col in all_projects_df.columns:
+                                    if col != 'project_id':
+                                        edit_project_inputs[col].props(remove='readonly')
+
+
+                            def save_edited_project():
+                                if selected_project_id['value'] is None:
+                                    ui.notify('Please load a project first', type='negative')
+                                    return
+
+                                # Get the updated values
+                                updated_data = {col: inp.value for col, inp in edit_project_inputs.items() if
+                                                col != 'project_id_selector'}
+
+                                # Validate that no fields are blank
+                                for col, value in updated_data.items():
+                                    if col != 'project_id' and (not value or not str(value).strip()):
+                                        ui.notify(f'{col.replace("_", " ").title()} cannot be blank', type='negative')
+                                        return
+
+                                # Update in API
+                                project = api.research_project_repo.update(selected_project_id['value'], **updated_data)
+
+                                # Update the dataframe
+                                global all_projects_df
+                                idx = \
+                                    all_projects_df[
+                                        all_projects_df['project_id'] == selected_project_id['value']].index[0]
+                                for col, value in updated_data.items():
+                                    all_projects_df.at[idx, col] = value
+
+                                # Update the table
+                                tbl_view_projects.rows = all_projects_df.to_dict('records')
+                                tbl_view_projects.update()
+
+                                edit_project_dialog.close()
+                                ui.notify('Project updated successfully', type='positive')
+
+
+                            with ui.row().classes('gap-2 mt-4'):
+                                ui.button('Cancel', on_click=edit_project_dialog.close)
+                                ui.button('Edit', on_click=enable_project_editing)
+                                ui.button('Save', on_click=save_edited_project)
+                    with ui.dialog() as delete_project_dialog:
+                        with ui.card().classes('w-[400px]'):
+                            ui.label('Delete Project').classes('text-lg font-bold')
+
+                            delete_project_inputs = {}
+                            delete_selected_project_id = {'value': None}
+
+
+                            # project ID selector
+                            def validate_and_load_project_for_delete():
+                                delete_project_id_value = delete_project_inputs['project_id_selector'].value
+
+                                if not delete_project_id_value or not delete_project_id_value.strip():
+                                    ui.notify('Please enter a project ID', type='negative')
+                                    return
+
+                                # Check if project exists
+                                try:
+                                    delete_project_id_int = int(delete_project_id_value)
+                                except ValueError:
+                                    ui.notify('project ID must be a number', type='negative')
+                                    return
+
+                                if delete_project_id_int not in all_projects_df['project_id'].values:
+                                    ui.notify(f'project ID {delete_project_id_int} does not exist', type='negative')
+                                    return
+
+                                # Load project data
+                                delete_selected_project_id['value'] = delete_project_id_int
+                                project_row = all_projects_df[all_projects_df['project_id'] == delete_project_id_int].iloc[
+                                    0]
+
+                                # Populate input fields
+                                for col in all_projects_df.columns:
+                                    if col != 'project_id':
+                                        delete_project_inputs[col].value = str(project_row[col])
+
+                                ui.notify(f'Loaded project {delete_project_id_int}', type='positive')
+
+
+                            # project ID input with dropdown
+                            with ui.row().classes('w-full items-end gap-2'):
+                                delete_project_inputs['project_id_selector'] = ui.select(
+                                    label='project ID',
+                                    options=sorted(all_projects_df['project_id'].astype(str).tolist()),
+                                    with_input=True
+                                ).classes('flex-grow')
+                                ui.button('Load', on_click=validate_and_load_project_for_delete)
+
+                            ui.separator()
+
+                            # Create input fields for all other columns (read-only)
+                            for col in all_projects_df.columns:
+                                if col != 'project_id':
+                                    delete_project_inputs[col] = ui.input(
+                                        label=col.replace('_', ' ').title()
+                                    ).props('readonly')
+
+                            ui.separator()
+
+                            ui.label('Warning: This action cannot be undone!').classes('text-red-600 font-semibold')
+
+
+                            def delete_project():
+                                if delete_selected_project_id['value'] is None:
+                                    ui.notify('Please load a project first', type='negative')
+                                    return
+
+                                # Delete from API
+                                try:
+                                    api.research_project_repo.delete(delete_selected_project_id['value'])
+                                except Exception as e:
+                                    ui.notify(f'Error deleting project: {str(e)}', type='negative')
+                                    return
+
+                                # Delete from dataframe
+                                global all_projects_df
+                                all_projects_df = all_projects_df[
+                                    all_projects_df['project_id'] != delete_selected_project_id['value']]
+                                all_projects_df.reset_index(drop=True, inplace=True)
+
+                                # Update the table
+                                tbl_view_projects.rows = all_projects_df.to_dict('records')
+                                tbl_view_projects.update()
+
+                                # Reset dialog state
+                                delete_selected_project_id['value'] = None
+                                for col in all_projects_df.columns:
+                                    if col != 'project_id':
+                                        delete_project_inputs[col].value = ''
+                                delete_project_inputs['project_id_selector'].value = None
+
+                                delete_project_dialog.close()
+                                ui.notify('project deleted successfully', type='positive')
+
+
+                            with ui.row().classes('gap-2 mt-4'):
+                                ui.button('Cancel', on_click=delete_project_dialog.close)
+                                ui.button('Delete', on_click=delete_project, color='red')
+                    with ui.row().classes('gap-4'):
+                        ui.button('Add', on_click=lambda: add_project_dialog.open())
+                        ui.button('Edit', on_click=lambda: edit_project_dialog.open())
+                        ui.button('Delete', on_click=lambda: delete_project_dialog.open(), color='red')
     with ui.tab_panels(main_tabs, value = tab_qr).classes('w-full'):
         with ui.tab_panel(tab_qr):
             with ui.row().classes('w-full justify-center mb-4'):
