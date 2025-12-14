@@ -22,8 +22,8 @@ all_students_df = pd.DataFrame([student.as_dict for student in students])
 lecturers = api.lecturer_repo.get_all()
 all_lecturers_df = pd.DataFrame([lecturer.as_dict for lecturer in lecturers])
 
-nas = api.staff_repo.get_all()
-all_nas_df = pd.DataFrame([staff.as_dict for staff in nas])
+staff = api.staff_repo.get_all()
+all_staff_df = pd.DataFrame([staff.as_dict for staff in staff])
 
 courses = api.course_repo.get_all()
 all_courses_df = pd.DataFrame([course.as_dict for course in courses])
@@ -57,8 +57,8 @@ ui.add_css('''
     #    'lecturer_id', 'dept_id', 'name', 'course_load'
     #]
 
-#def build_view_nas():
-    #tbl_view_nas = [
+#def build_view_staff():
+    #tbl_view_staff = [
     #    'staff_id', 'dept_id', 'name', 'job_title', 'employment_type', 'contract_details', 'salary', 'emergency_contact'
     #]
 
@@ -76,7 +76,7 @@ with ui.column().classes('w-full'):
     with ui.tabs().classes('w-full') as main_tabs:
         tab_students = ui.tab('Students')
         tab_lecturers = ui.tab('Lecturers')
-        tab_nas = ui.tab('Non-Academic Staff')
+        tab_staff = ui.tab('Non-Academic Staff')
         tab_courses = ui.tab('Courses')
         tab_departments = ui.tab('Departments')
         tab_rp = ui.tab('Research Projects')
@@ -563,115 +563,114 @@ with ui.column().classes('w-full'):
                         with ui.card().classes('w-[400px]'):
                             ui.label('Delete Lecturer').classes('text-lg font-bold')
 
-                        delete_lecturer_inputs = {}
-                        delete_selected_lecturer_id = {'value': None}
+                            delete_lecturer_inputs = {}
+                            delete_selected_lecturer_id = {'value': None}
 
 
-                        # lecturer ID selector
-                        def validate_and_load_lecturer_for_delete():
-                            delete_lecturer_id_value = delete_lecturer_inputs['lecturer_id_selector'].value
+                            # lecturer ID selector
+                            def validate_and_load_lecturer_for_delete():
+                                delete_lecturer_id_value = delete_lecturer_inputs['lecturer_id_selector'].value
 
-                            if not delete_lecturer_id_value or not delete_lecturer_id_value.strip():
-                                ui.notify('Please enter a lecturer ID', type='negative')
-                                return
+                                if not delete_lecturer_id_value or not delete_lecturer_id_value.strip():
+                                    ui.notify('Please enter a lecturer ID', type='negative')
+                                    return
 
-                            # Check if lecturer exists
-                            try:
-                                delete_lecturer_id_int = int(delete_lecturer_id_value)
-                            except ValueError:
-                                ui.notify('lecturer ID must be a number', type='negative')
-                                return
+                                # Check if lecturer exists
+                                try:
+                                    delete_lecturer_id_int = int(delete_lecturer_id_value)
+                                except ValueError:
+                                    ui.notify('lecturer ID must be a number', type='negative')
+                                    return
 
-                            if delete_lecturer_id_int not in all_lecturers_df['lecturer_id'].values:
-                                ui.notify(f'lecturer ID {delete_lecturer_id_int} does not exist', type='negative')
-                                return
+                                if delete_lecturer_id_int not in all_lecturers_df['lecturer_id'].values:
+                                    ui.notify(f'lecturer ID {delete_lecturer_id_int} does not exist', type='negative')
+                                    return
 
-                            # Load lecturer data
-                            delete_selected_lecturer_id['value'] = delete_lecturer_id_int
-                            lecturer_row = all_lecturers_df[all_lecturers_df['lecturer_id'] == delete_lecturer_id_int].iloc[
-                                0]
+                                # Load lecturer data
+                                delete_selected_lecturer_id['value'] = delete_lecturer_id_int
+                                lecturer_row = all_lecturers_df[all_lecturers_df['lecturer_id'] == delete_lecturer_id_int].iloc[
+                                    0]
 
-                            # Populate input fields
+                                # Populate input fields
+                                for col in all_lecturers_df.columns:
+                                    if col != 'lecturer_id':
+                                        delete_lecturer_inputs[col].value = str(lecturer_row[col])
+
+                                ui.notify(f'Loaded lecturer {delete_lecturer_id_int}', type='positive')
+
+
+                            # lecturer ID input with dropdown
+                            with ui.row().classes('w-full items-end gap-2'):
+                                delete_lecturer_inputs['lecturer_id_selector'] = ui.select(
+                                    label='lecturer ID',
+                                    options=sorted(all_lecturers_df['lecturer_id'].astype(str).tolist()),
+                                    with_input=True
+                                ).classes('flex-grow')
+                                ui.button('Load', on_click=validate_and_load_lecturer_for_delete)
+
+                            ui.separator()
+
+                            # Create input fields for all other columns (read-only)
                             for col in all_lecturers_df.columns:
                                 if col != 'lecturer_id':
-                                    delete_lecturer_inputs[col].value = str(lecturer_row[col])
+                                    delete_lecturer_inputs[col] = ui.input(
+                                        label=col.replace('_', ' ').title()
+                                    ).props('readonly')
 
-                            ui.notify(f'Loaded lecturer {delete_lecturer_id_int}', type='positive')
+                            ui.separator()
 
-
-                        # lecturer ID input with dropdown
-                        with ui.row().classes('w-full items-end gap-2'):
-                            delete_lecturer_inputs['lecturer_id_selector'] = ui.select(
-                                label='lecturer ID',
-                                options=sorted(all_lecturers_df['lecturer_id'].astype(str).tolist()),
-                                with_input=True
-                            ).classes('flex-grow')
-                            ui.button('Load', on_click=validate_and_load_lecturer_for_delete)
-
-                        ui.separator()
-
-                        # Create input fields for all other columns (read-only)
-                        for col in all_lecturers_df.columns:
-                            if col != 'lecturer_id':
-                                delete_lecturer_inputs[col] = ui.input(
-                                    label=col.replace('_', ' ').title()
-                                ).props('readonly')
-
-                        ui.separator()
-
-                        ui.label('Warning: This action cannot be undone!').classes('text-red-600 font-semibold')
+                            ui.label('Warning: This action cannot be undone!').classes('text-red-600 font-semibold')
 
 
-                        def delete_lecturer():
-                            if delete_selected_lecturer_id['value'] is None:
-                                ui.notify('Please load a lecturer first', type='negative')
-                                return
+                            def delete_lecturer():
+                                if delete_selected_lecturer_id['value'] is None:
+                                    ui.notify('Please load a lecturer first', type='negative')
+                                    return
 
-                            # Delete from API
-                            try:
-                                api.lecturer_repo.delete(delete_selected_lecturer_id['value'])
-                            except Exception as e:
-                                ui.notify(f'Error deleting lecturer: {str(e)}', type='negative')
-                                return
+                                # Delete from API
+                                try:
+                                    api.lecturer_repo.delete(delete_selected_lecturer_id['value'])
+                                except Exception as e:
+                                    ui.notify(f'Error deleting lecturer: {str(e)}', type='negative')
+                                    return
 
-                            # Delete from dataframe
-                            global all_lecturers_df
-                            all_lecturers_df = all_lecturers_df[
-                                all_lecturers_df['lecturer_id'] != delete_selected_lecturer_id['value']]
-                            all_lecturers_df.reset_index(drop=True, inplace=True)
+                                # Delete from dataframe
+                                global all_lecturers_df
+                                all_lecturers_df = all_lecturers_df[
+                                    all_lecturers_df['lecturer_id'] != delete_selected_lecturer_id['value']]
+                                all_lecturers_df.reset_index(drop=True, inplace=True)
 
-                            # Update the table
-                            tbl_view_lecturers.rows = all_lecturers_df.to_dict('records')
-                            tbl_view_lecturers.update()
+                                # Update the table
+                                tbl_view_lecturers.rows = all_lecturers_df.to_dict('records')
+                                tbl_view_lecturers.update()
 
-                            # Reset dialog state
-                            delete_selected_lecturer_id['value'] = None
-                            for col in all_lecturers_df.columns:
-                                if col != 'lecturer_id':
-                                    delete_lecturer_inputs[col].value = ''
-                            delete_lecturer_inputs['lecturer_id_selector'].value = None
+                                # Reset dialog state
+                                delete_selected_lecturer_id['value'] = None
+                                for col in all_lecturers_df.columns:
+                                    if col != 'lecturer_id':
+                                        delete_lecturer_inputs[col].value = ''
+                                delete_lecturer_inputs['lecturer_id_selector'].value = None
 
-                            delete_lecturer_dialog.close()
-                            ui.notify('lecturer deleted successfully', type='positive')
+                                delete_lecturer_dialog.close()
+                                ui.notify('lecturer deleted successfully', type='positive')
 
 
-                        with ui.row().classes('gap-2 mt-4'):
-                            ui.button('Cancel', on_click=delete_lecturer_dialog.close)
-                            ui.button('Delete', on_click=delete_lecturer, color='red')
-
+                            with ui.row().classes('gap-2 mt-4'):
+                                ui.button('Cancel', on_click=delete_lecturer_dialog.close)
+                                ui.button('Delete', on_click=delete_lecturer, color='red')
                     with ui.row().classes('gap-4'):
                         ui.button('Add', on_click=lambda: add_lecturer_dialog.open())
                         ui.button('Edit', on_click=lambda: edit_lecturer_dialog.open())
                         ui.button('Delete', on_click=lambda: delete_lecturer_dialog.open(), color='red')
-    with ui.tab_panels(main_tabs, value = tab_nas).classes('w-full'):
-        with ui.tab_panel(tab_nas):
+    with ui.tab_panels(main_tabs, value = tab_staff).classes('w-full'):
+        with ui.tab_panel(tab_staff):
             with ui.row().classes('w-full justify-center mb-4'):
                 ui.label('Non-Academic Staff Records').classes('text-xl')
-            with ui.tabs().classes('w-full') as nas_ops:
-                tab_nas_view = ui.tab('View Non-Academic Staff Records')
-                tab_nas_manage = ui.tab('Manage Non-Academic Staff Records')
-            with ui.tab_panels(nas_ops).classes('w-full'):
-                with ui.tab_panel(tab_nas_view).classes('w-full'):
+            with ui.tabs().classes('w-full') as staff_ops:
+                tab_staff_view = ui.tab('View Non-Academic Staff Records')
+                tab_staff_manage = ui.tab('Manage Non-Academic Staff Records')
+            with ui.tab_panels(staff_ops).classes('w-full'):
+                with ui.tab_panel(tab_staff_view).classes('w-full'):
                     columns = [
                         {
                             'name': col,
@@ -679,18 +678,286 @@ with ui.column().classes('w-full'):
                             'field': col,
                             'sortable': True,
                         }
-                        for col in all_nas_df.columns
+                        for col in all_staff_df.columns
                     ]
 
-                    rows = all_nas_df.to_dict(orient='records')
+                    rows = all_staff_df.to_dict(orient='records')
 
-                    tbl_view_nas = ui.table(
+                    tbl_view_staff = ui.table(
                         columns=columns,
                         rows=rows,
                         row_key='staff_id',
                     ).classes('w-full border border-black text-black bg-white')
-                with ui.tab_panel(tab_nas_manage).classes('w-full'):
-                    inputs6 = {}
+                with ui.tab_panel(tab_staff_manage).classes('w-full'):
+                    with ui.dialog() as add_staff_dialog:
+                        with ui.card().classes('w-[400px]'):
+                            ui.label('Add staff').classes('text-lg font-bold')
+
+
+                            def get_next_staff_id(df):
+                                if df.empty:
+                                    return 1
+                                return int(df['staff_id'].max()) + 1
+
+
+                            new_staff_inputs = {}
+
+                            # Create input fields for all columns
+                            for col in all_staff_df.columns:
+                                if col == 'staff_id':
+                                    # Show the auto-generated student_id as read-only
+                                    new_staff_id = get_next_staff_id(all_staff_df)
+                                    new_staff_inputs[col] = ui.input(
+                                        label=f'Staff ID',
+                                        value=str(new_staff_id)
+                                    ).props('readonly')
+                                else:
+                                    # Create editable input for other columns
+                                    new_staff_inputs[col] = ui.input(
+                                        label=col.replace('_', ' ').title()
+                                    )
+
+
+                            def save_staff():
+                                staff_data = {col: inp.value for col, inp in new_staff_inputs.items()}
+
+                                for col, value in staff_data.items():
+                                    if col != 'staff_id' and not value.strip():
+                                        ui.notify(f'{col.replace("_", " ").title()} cannot be blank', type='negative')
+                                        return
+
+                                # print(staff_data)
+
+                                staff = api.staff_repo.create(**staff_data)
+                                api.commit()
+
+                                global all_staff_df
+                                all_staff_df = pd.concat([all_staff_df, pd.DataFrame([staff_data])],
+                                                             ignore_index=True)
+
+                                add_staff_dialog.close()
+                                ui.notify('Staff added successfully', type='positive')
+
+                                tbl_view_staff.rows[:] = all_staff_df.to_dict('records')
+                                tbl_view_staff.update()
+
+
+                            with ui.row().classes('gap-2 mt-4'):
+                                ui.button('Cancel', on_click=add_staff_dialog.close)
+                                ui.button('Save', on_click=save_staff)
+                    with ui.dialog() as edit_staff_dialog:
+                        with ui.card().classes('w-[400px]'):
+                            ui.label('Edit Staff').classes('text-lg font-bold')
+
+                            edit_staff_inputs = {}
+                            selected_staff_id = {'value': None}  # Store selected ID
+
+
+                            # Staff ID selector
+                            def validate_and_load_staff():
+                                staff_id_value = edit_staff_inputs['staff_id_selector'].value
+
+                                if not staff_id_value or not staff_id_value.strip():
+                                    ui.notify('Please enter a Staff ID', type='negative')
+                                    return
+
+                                # Check if staff exists
+                                try:
+                                    staff_id_int = int(staff_id_value)
+                                except ValueError:
+                                    ui.notify('Staff ID must be a number', type='negative')
+                                    return
+
+                                if staff_id_int not in all_staff_df['staff_id'].values:
+                                    ui.notify(f'Staff ID {staff_id_int} does not exist', type='negative')
+                                    return
+
+                                # Load staff data
+                                selected_staff_id['value'] = staff_id_int
+                                staff_row = \
+                                all_staff_df[all_staff_df['staff_id'] == staff_id_int].iloc[0]
+
+                                # Populate input fields
+                                for col in all_staff_df.columns:
+                                    if col != 'staff_id':
+                                        edit_staff_inputs[col].value = str(staff_row[col])
+
+                                ui.notify(f'Loaded Staff {staff_id_int}', type='positive')
+
+
+                            # staff ID input with dropdown
+                            with ui.row().classes('w-full items-end gap-2'):
+                                edit_staff_inputs['staff_id_selector'] = ui.select(
+                                    label='staff ID',
+                                    options=sorted(all_staff_df['staff_id'].astype(str).tolist()),
+                                    with_input=True
+                                ).classes('flex-grow')
+                                ui.button('Load', on_click=validate_and_load_staff)
+
+                            ui.separator()
+
+                            # Create input fields for all other columns
+                            for col in all_staff_df.columns:
+                                if col != 'staff_id':
+                                    edit_staff_inputs[col] = ui.input(
+                                        label=col.replace('_', ' ').title()
+                                    ).props('readonly')  # Start as readonly until staff is loaded
+
+
+                            def enable_staff_editing():
+                                if selected_staff_id['value'] is None:
+                                    ui.notify('Please load Staff first', type='negative')
+                                    return
+
+                                # Enable all fields for editing
+                                for col in all_staff_df.columns:
+                                    if col != 'staff_id':
+                                        edit_staff_inputs[col].props(remove='readonly')
+
+
+                            def save_edited_staff():
+                                if selected_staff_id['value'] is None:
+                                    ui.notify('Please load Staff first', type='negative')
+                                    return
+
+                                # Get the updated values
+                                updated_data = {col: inp.value for col, inp in edit_staff_inputs.items() if
+                                                col != 'staff_id_selector'}
+
+                                # Validate that no fields are blank
+                                for col, value in updated_data.items():
+                                    if col != 'staff_id_selector' and (not value or not str(value).strip()):
+                                        ui.notify(f'{col.replace("_", " ").title()} cannot be blank', type='negative')
+                                        return
+
+                                # Update in API
+                                staff = api.staff_repo.update(selected_staff_id['value'], **updated_data)
+
+                                # Update the dataframe
+                                global all_staff_df
+                                idx = \
+                                    all_staff_df[
+                                        all_staff_df['staff_id'] == selected_staff_id['value']].index[0]
+                                for col, value in updated_data.items():
+                                    all_staff_df.at[idx, col] = value
+
+                                # Update the table
+                                tbl_view_staff.rows = all_staff_df.to_dict('records')
+                                tbl_view_staff.update()
+
+                                edit_staff_dialog.close()
+                                ui.notify('staff updated successfully', type='positive')
+
+
+                            with ui.row().classes('gap-2 mt-4'):
+                                ui.button('Cancel', on_click=edit_staff_dialog.close)
+                                ui.button('Edit', on_click=enable_staff_editing)
+                                ui.button('Save', on_click=save_edited_staff)
+                    with ui.dialog() as delete_staff_dialog:
+                        with ui.card().classes('w-[400px]'):
+                            ui.label('Delete Staff').classes('text-lg font-bold')
+
+                            delete_staff_inputs = {}
+                            delete_selected_staff_id = {'value': None}
+
+
+                            # staff ID selector
+                            def validate_and_load_staff_for_delete():
+                                delete_staff_id_value = delete_staff_inputs['staff_id_selector'].value
+
+                                if not delete_staff_id_value or not delete_staff_id_value.strip():
+                                    ui.notify('Please enter Staff ID', type='negative')
+                                    return
+
+                                # Check if staff exists
+                                try:
+                                    delete_staff_id_int = int(delete_staff_id_value)
+                                except ValueError:
+                                    ui.notify('Staff ID must be a number', type='negative')
+                                    return
+
+                                if delete_staff_id_int not in all_staff_df['staff_id'].values:
+                                    ui.notify(f'Staff ID {delete_staff_id_int} does not exist', type='negative')
+                                    return
+
+                                # Load staff data
+                                delete_selected_staff_id['value'] = delete_staff_id_int
+                                staff_row = \
+                                all_staff_df[all_staff_df['staff_id'] == delete_staff_id_int].iloc[
+                                    0]
+
+                                # Populate input fields
+                                for col in all_staff_df.columns:
+                                    if col != 'staff_id':
+                                        delete_staff_inputs[col].value = str(staff_row[col])
+
+                                ui.notify(f'Loaded Staff {delete_staff_id_int}', type='positive')
+
+
+                            # staff ID input with dropdown
+                            with ui.row().classes('w-full items-end gap-2'):
+                                delete_staff_inputs['staff_id_selector'] = ui.select(
+                                    label='Staff ID',
+                                    options=sorted(all_staff_df['staff_id'].astype(str).tolist()),
+                                    with_input=True
+                                ).classes('flex-grow')
+                                ui.button('Load', on_click=validate_and_load_staff_for_delete)
+
+                            ui.separator()
+
+                            # Create input fields for all other columns (read-only)
+                            for col in all_staff_df.columns:
+                                if col != 'staff_id':
+                                    delete_staff_inputs[col] = ui.input(
+                                        label=col.replace('_', ' ').title()
+                                    ).props('readonly')
+
+                            ui.separator()
+
+                            ui.label('Warning: This action cannot be undone!').classes('text-red-600 font-semibold')
+
+
+                            def delete_staff():
+                                if delete_selected_staff_id['value'] is None:
+                                    ui.notify('Please load a Staff first', type='negative')
+                                    return
+
+                                # Delete from API
+                                try:
+                                    api.staff_repo.delete(delete_selected_staff_id['value'])
+                                except Exception as e:
+                                    ui.notify(f'Error deleting Staff: {str(e)}', type='negative')
+                                    return
+
+                                # Delete from dataframe
+                                global all_staff_df
+                                all_staff_df = all_staff_df[
+                                    all_staff_df['staff_id'] != delete_selected_staff_id['value']]
+                                all_staff_df.reset_index(drop=True, inplace=True)
+
+                                # Update the table
+                                tbl_view_staff.rows = all_staff_df.to_dict('records')
+                                tbl_view_staff.update()
+
+                                # Reset dialog state
+                                delete_selected_staff_id['value'] = None
+                                for col in all_staff_df.columns:
+                                    if col != 'staff_id':
+                                        delete_staff_inputs[col].value = ''
+                                delete_staff_inputs['staff_id_selector'].value = None
+
+                                delete_staff_dialog.close()
+                                ui.notify('staff deleted successfully', type='positive')
+
+
+                            with ui.row().classes('gap-2 mt-4'):
+                                ui.button('Cancel', on_click=delete_staff_dialog.close)
+                                ui.button('Delete', on_click=delete_staff, color='red')
+
+                        with ui.row().classes('gap-4'):
+                            ui.button('Add', on_click=lambda: add_staff_dialog.open())
+                            ui.button('Edit', on_click=lambda: edit_staff_dialog.open())
+                            ui.button('Delete', on_click=lambda: delete_staff_dialog.open(), color='red')
     with ui.tab_panels(main_tabs, value = tab_courses).classes('w-full'):
         with ui.tab_panel(tab_courses):
             with ui.row().classes('w-full justify-center mb-4'):
