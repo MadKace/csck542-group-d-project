@@ -238,11 +238,6 @@ with ui.column().classes('w-full'):
                                     return
 
                                 # Get the updated values
-                                """updated_data = {col: inp.value for col, inp in edit_student_inputs.items() if
-                                
-                                                col != 'student_id_selector'}
-                                updated_data['student_id'] = selected_student_id['value']
-                                """
                                 updated_data = {col: inp.value for col, inp in edit_student_inputs.items() if
                                                 col != 'student_id_selector'}
 
