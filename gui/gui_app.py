@@ -22,9 +22,11 @@ all_students_df = pd.DataFrame([student.as_dict for student in students])
 lecturers = api.lecturer_repo.get_all()
 all_lecturer_df = pd.DataFrame([lecturer.as_dict for lecturer in lecturers])
 
-courses = api.course_repo.get_all()
-all_courses_df = pd.DataFrame([lecturer.as_dict for lecturer in lecturers])
+nas = api.staff_repo.get_all()
+all_nas_df = pd.DataFrame([staff.as_dict for staff in nas])
 
+courses = api.course_repo.get_all()
+all_courses_df = pd.DataFrame([course.as_dict for course in courses])
 
 #print(all_students_df)
 #print(lecturers)
@@ -44,20 +46,20 @@ ui.add_css('''
     #    'graduation_status'
     #]
 
-def build_view_lectures():
-    tbl_view_lectures = [
-        'lecturer_id', 'dept_id', 'name', 'course_load'
-    ]
+#def build_view_lectures():
+    #tbl_view_lectures = [
+    #    'lecturer_id', 'dept_id', 'name', 'course_load'
+    #]
 
-def build_view_nas():
-    tbl_view_nas = [
-        'staff_id', 'dept_id', 'name', 'job_title', 'employment_type', 'contract_details', 'salary', 'emergency_contact'
-    ]
+#def build_view_nas():
+    #tbl_view_nas = [
+    #    'staff_id', 'dept_id', 'name', 'job_title', 'employment_type', 'contract_details', 'salary', 'emergency_contact'
+    #]
 
-def build_view_courses():
-    tbl_view_courses = [
-        'programme_id', 'course_id', 'is_required'
-    ]
+#def build_view_courses():
+ #   tbl_view_courses = [
+ #       'programme_id', 'course_id', 'is_required'
+ #   ]
 
 def build_view_department():
     tbl_view_departments = [
@@ -138,7 +140,23 @@ with ui.column().classes('w-full'):
                 tab_nas_manage = ui.tab('Manage Non-Academic Staff Records')
             with ui.tab_panels(nas_ops).classes('w-full'):
                 with ui.tab_panel(tab_nas_view).classes('w-full'):
-                    inputs5 = {}
+                    columns = [
+                        {
+                            'name': col,
+                            'label': col.replace('_', ' ').title(),  # nicer column titles
+                            'field': col,
+                            'sortable': True,
+                        }
+                        for col in all_nas_df.columns
+                    ]
+
+                    rows = all_nas_df.to_dict(orient='records')
+
+                    tbl_view_nas = ui.table(
+                        columns=columns,
+                        rows=rows,
+                        row_key='staff_id',
+                    ).classes('w-full border border-black text-black bg-white')
                 with ui.tab_panel(tab_nas_manage).classes('w-full'):
                     inputs6 = {}
     with ui.tab_panels(main_tabs, value = tab_courses).classes('w-full'):
@@ -150,7 +168,23 @@ with ui.column().classes('w-full'):
                 tab_courses_manage = ui.tab('Manage Course Records')
             with ui.tab_panels(course_ops).classes('w-full'):
                 with ui.tab_panel(tab_courses_view).classes('w-full'):
-                    inputs7 = {}
+                    columns = [
+                        {
+                            'name': col,
+                            'label': col.replace('_', ' ').title(),  # nicer column titles
+                            'field': col,
+                            'sortable': True,
+                        }
+                        for col in all_courses_df.columns
+                    ]
+
+                    rows = all_courses_df.to_dict(orient='records')
+
+                    tbl_view_courses = ui.table(
+                        columns=columns,
+                        rows=rows,
+                        row_key='course_id',
+                    ).classes('w-full border border-black text-black bg-white')
                 with ui.tab_panel(tab_courses_manage).classes('w-full'):
                     inputs8 = {}
     with ui.tab_panels(main_tabs, value = tab_research_projects).classes('w-full'):
