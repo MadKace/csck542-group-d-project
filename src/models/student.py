@@ -31,15 +31,19 @@ class Student(Base):
     # Relationships
     programme: Mapped["Programme | None"] = relationship(back_populates="students")
     advisor: Mapped["Lecturer | None"] = relationship(back_populates="advisees")
-    grades: Mapped[list["StudentGrade"]] = relationship(back_populates="student")
+    grades: Mapped[list["StudentGrade"]] = relationship(
+        back_populates="student", passive_deletes=True
+    )
     disciplinary_records: Mapped[list["DisciplinaryRecord"]] = relationship(
-        back_populates="student"
+        back_populates="student", passive_deletes=True
     )
     courses: Mapped[list["Course"]] = relationship(
-        secondary="student_course", back_populates="students"
+        secondary="student_course", back_populates="students", passive_deletes=True
     )
     research_projects: Mapped[list["ResearchProject"]] = relationship(
-        secondary="research_project_member", back_populates="student_members"
+        secondary="research_project_member",
+        back_populates="student_members",
+        passive_deletes=True,
     )
 
 

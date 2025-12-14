@@ -25,15 +25,19 @@ class Department(Base):
 
     # Relationships
     research_areas: Mapped[list["ResearchArea"]] = relationship(
-        back_populates="department"
+        back_populates="department", passive_deletes=True
     )
-    lecturers: Mapped[list["Lecturer"]] = relationship(back_populates="department")
-    courses: Mapped[list["Course"]] = relationship(back_populates="department")
+    lecturers: Mapped[list["Lecturer"]] = relationship(
+        back_populates="department", passive_deletes=True
+    )
+    courses: Mapped[list["Course"]] = relationship(
+        back_populates="department", passive_deletes=True
+    )
     staff: Mapped[list["NonAcademicStaff"]] = relationship(
-        back_populates="department"
+        back_populates="department", passive_deletes=True
     )
     research_projects: Mapped[list["ResearchProject"]] = relationship(
-        back_populates="department"
+        back_populates="department", passive_deletes=True
     )
 
 

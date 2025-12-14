@@ -48,7 +48,7 @@ CREATE TABLE lecturer (
     dept_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     course_load INTEGER,
-    FOREIGN KEY (dept_id) REFERENCES department(dept_id)
+    FOREIGN KEY (dept_id) REFERENCES department(dept_id) ON DELETE CASCADE
 );
 
 CREATE TABLE student (
@@ -60,8 +60,8 @@ CREATE TABLE student (
     contact_info TEXT,
     year_of_study INTEGER CHECK (year_of_study > 0),
     graduation_status TEXT,
-    FOREIGN KEY (programme_id) REFERENCES programme(programme_id),
-    FOREIGN KEY (advisor_id) REFERENCES lecturer(lecturer_id)
+    FOREIGN KEY (programme_id) REFERENCES programme(programme_id) ON DELETE CASCADE,
+    FOREIGN KEY (advisor_id) REFERENCES lecturer(lecturer_id) ON DELETE SET NULL
 );
 
 CREATE TABLE course (
@@ -73,7 +73,7 @@ CREATE TABLE course (
     level TEXT,
     credits INTEGER CHECK (credits > 0),
     schedule TEXT,
-    FOREIGN KEY (dept_id) REFERENCES department(dept_id)
+    FOREIGN KEY (dept_id) REFERENCES department(dept_id) ON DELETE CASCADE
 );
 
 CREATE TABLE non_academic_staff (
@@ -85,7 +85,7 @@ CREATE TABLE non_academic_staff (
     contract_details TEXT,
     salary REAL CHECK (salary >= 0),
     emergency_contact TEXT,
-    FOREIGN KEY (dept_id) REFERENCES department(dept_id)
+    FOREIGN KEY (dept_id) REFERENCES department(dept_id) ON DELETE SET NULL
 );
 
 CREATE TABLE research_project (
@@ -95,8 +95,8 @@ CREATE TABLE research_project (
     title TEXT NOT NULL,
     start_date DATE,
     end_date DATE,
-    FOREIGN KEY (head_lecturer_id) REFERENCES lecturer(lecturer_id),
-    FOREIGN KEY (dept_id) REFERENCES department(dept_id)
+    FOREIGN KEY (head_lecturer_id) REFERENCES lecturer(lecturer_id) ON DELETE CASCADE,
+    FOREIGN KEY (dept_id) REFERENCES department(dept_id) ON DELETE SET NULL
 );
 
 CREATE TABLE disciplinary_record (
@@ -105,7 +105,7 @@ CREATE TABLE disciplinary_record (
     incident_date DATE,
     description TEXT,
     action_taken TEXT,
-    FOREIGN KEY (student_id) REFERENCES student(student_id)
+    FOREIGN KEY (student_id) REFERENCES student(student_id) ON DELETE CASCADE
 );
 
 CREATE TABLE student_grade (
@@ -115,8 +115,8 @@ CREATE TABLE student_grade (
     assessment_type TEXT,
     grade INTEGER CHECK (grade >= 0 AND grade <= 100),
     date_recorded DATE,
-    FOREIGN KEY (student_id) REFERENCES student(student_id),
-    FOREIGN KEY (course_id) REFERENCES course(course_id)
+    FOREIGN KEY (student_id) REFERENCES student(student_id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES course(course_id) ON DELETE CASCADE
 );
 
 CREATE TABLE lecturer_qualification (
@@ -125,21 +125,21 @@ CREATE TABLE lecturer_qualification (
     qualification_name TEXT NOT NULL,
     institution TEXT,
     year_awarded INTEGER,
-    FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id)
+    FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id) ON DELETE CASCADE
 );
 
 CREATE TABLE lecturer_expertise (
     expertise_id INTEGER PRIMARY KEY AUTOINCREMENT,
     lecturer_id INTEGER NOT NULL,
     area TEXT NOT NULL,
-    FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id)
+    FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id) ON DELETE CASCADE
 );
 
 CREATE TABLE lecturer_research_interest (
     interest_id INTEGER PRIMARY KEY AUTOINCREMENT,
     lecturer_id INTEGER NOT NULL,
     interest TEXT NOT NULL,
-    FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id)
+    FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id) ON DELETE CASCADE
 );
 
 CREATE TABLE publication (
@@ -148,7 +148,7 @@ CREATE TABLE publication (
     title TEXT NOT NULL,
     journal TEXT,
     publication_date DATE,
-    FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id)
+    FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id) ON DELETE CASCADE
 );
 
 CREATE TABLE course_material (
@@ -157,14 +157,14 @@ CREATE TABLE course_material (
     title TEXT NOT NULL,
     material_type TEXT,
     url TEXT,
-    FOREIGN KEY (course_id) REFERENCES course(course_id)
+    FOREIGN KEY (course_id) REFERENCES course(course_id) ON DELETE CASCADE
 );
 
 CREATE TABLE department_research_area (
     area_id INTEGER PRIMARY KEY AUTOINCREMENT,
     dept_id INTEGER NOT NULL,
     area TEXT NOT NULL,
-    FOREIGN KEY (dept_id) REFERENCES department(dept_id)
+    FOREIGN KEY (dept_id) REFERENCES department(dept_id) ON DELETE CASCADE
 );
 
 CREATE TABLE project_funding (
@@ -172,7 +172,7 @@ CREATE TABLE project_funding (
     project_id INTEGER NOT NULL,
     source_name TEXT NOT NULL,
     amount REAL CHECK (amount >= 0),
-    FOREIGN KEY (project_id) REFERENCES research_project(project_id)
+    FOREIGN KEY (project_id) REFERENCES research_project(project_id) ON DELETE CASCADE
 );
 
 CREATE TABLE project_publication (
@@ -180,7 +180,7 @@ CREATE TABLE project_publication (
     project_id INTEGER NOT NULL,
     title TEXT NOT NULL,
     publication_date DATE,
-    FOREIGN KEY (project_id) REFERENCES research_project(project_id)
+    FOREIGN KEY (project_id) REFERENCES research_project(project_id) ON DELETE CASCADE
 );
 
 CREATE TABLE project_outcome (
@@ -188,7 +188,7 @@ CREATE TABLE project_outcome (
     project_id INTEGER NOT NULL,
     description TEXT NOT NULL,
     outcome_date DATE,
-    FOREIGN KEY (project_id) REFERENCES research_project(project_id)
+    FOREIGN KEY (project_id) REFERENCES research_project(project_id) ON DELETE CASCADE
 );
 
 CREATE TABLE student_course (
@@ -197,24 +197,24 @@ CREATE TABLE student_course (
     semester TEXT,
     enrolment_date DATE,
     PRIMARY KEY (student_id, course_id),
-    FOREIGN KEY (student_id) REFERENCES student(student_id),
-    FOREIGN KEY (course_id) REFERENCES course(course_id)
+    FOREIGN KEY (student_id) REFERENCES student(student_id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES course(course_id) ON DELETE CASCADE
 );
 
 CREATE TABLE lecturer_course (
     lecturer_id INTEGER,
     course_id INTEGER,
     PRIMARY KEY (lecturer_id, course_id),
-    FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id),
-    FOREIGN KEY (course_id) REFERENCES course(course_id)
+    FOREIGN KEY (lecturer_id) REFERENCES lecturer(lecturer_id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES course(course_id) ON DELETE CASCADE
 );
 
 CREATE TABLE course_prerequisite (
     course_id INTEGER,
     prerequisite_id INTEGER,
     PRIMARY KEY (course_id, prerequisite_id),
-    FOREIGN KEY (course_id) REFERENCES course(course_id),
-    FOREIGN KEY (prerequisite_id) REFERENCES course(course_id)
+    FOREIGN KEY (course_id) REFERENCES course(course_id) ON DELETE CASCADE,
+    FOREIGN KEY (prerequisite_id) REFERENCES course(course_id) ON DELETE CASCADE
 );
 
 CREATE TABLE programme_course (
@@ -222,16 +222,16 @@ CREATE TABLE programme_course (
     course_id INTEGER,
     is_required INTEGER DEFAULT 1,
     PRIMARY KEY (programme_id, course_id),
-    FOREIGN KEY (programme_id) REFERENCES programme(programme_id),
-    FOREIGN KEY (course_id) REFERENCES course(course_id)
+    FOREIGN KEY (programme_id) REFERENCES programme(programme_id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES course(course_id) ON DELETE CASCADE
 );
 
 CREATE TABLE research_project_member (
     project_id INTEGER,
     student_id INTEGER,
     PRIMARY KEY (project_id, student_id),
-    FOREIGN KEY (project_id) REFERENCES research_project(project_id),
-    FOREIGN KEY (student_id) REFERENCES student(student_id)
+    FOREIGN KEY (project_id) REFERENCES research_project(project_id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES student(student_id) ON DELETE CASCADE
 );
 
 -- Indexes on foreign keys to improve join performance
