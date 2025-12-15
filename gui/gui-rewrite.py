@@ -34,6 +34,18 @@ all_departments_df = pd.DataFrame([department.as_dict for department in departme
 research_projects = api.research_project_repo.get_all()
 all_projects_df = pd.DataFrame([rp.as_dict for rp in research_projects])
 
+programmes = api.programme_repo.get_all()
+all_programmes_df = pd.DataFrame([prog.as_dict for prog in programmes])
+
+# Load publications data - special case as publication data is stored in parent repositories
+all_publications = []
+for lecturer in api.lecturer_repo.get_all():
+    pubs = api.lecturer_repo.get_publications(lecturer.lecturer_id)
+    all_publications.extend([pub.as_dict for pub in pubs])
+all_publications_df = pd.DataFrame(all_publications) if all_publications else pd.DataFrame(columns=['publication_id', 'lecturer_id', 'title', 'journal', 'publication_date'])
+
+
+
 """
 Helper Functions
 
@@ -641,12 +653,29 @@ entity_configs = [
         'label': 'Departmental Records',
     },
     {
+        'key': 'programmes',
+        'display_name': 'Programme',
+        'df': all_programmes_df,
+        'repo': api.programme_repo,
+        'id_column': 'programme_id',
+        'label': 'Programme Records',
+    },
+    {
         'key': 'research_projects',
         'display_name': 'Research Project',
         'df': all_projects_df,
         'repo': api.research_project_repo,
         'id_column': 'project_id',
         'label': 'Research Projects Records',
+    },
+    {
+        'key': 'publications',
+        'display_name': 'Publication',
+        'df': all_publications_df,
+        'repo': None,  # Publications are managed through lecturer repo
+        'id_column': 'publication_id',
+        'label': 'Publication Records',
+        'is_readonly': True,
     },
 ]
 
