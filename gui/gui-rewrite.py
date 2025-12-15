@@ -758,4 +758,53 @@ with ui.column().classes('w-full'):
 
                     ui.button('Run Query', on_click=query_courses_by_department, icon='play_arrow')
 
+            with ui.expansion('Complete Student Profile', icon='person_search').classes('w-full mb-4'):
+                with ui.column().classes('w-full gap-4'):
+                    student_select_profile = ui.select(
+                        label = 'Select Student',
+                        options=[f"{s.student_id}:{s.name}" for s in api.student_repo.get_all()],
+                        with_input = True
+                    ).classes('w-full')
+
+                    # A container for student profile information
+
+                    profile_container = ui.column().classes('w-full gap-4')
+
+                    def run_query_student_profile():
+                        if not student_select_profile.value:
+                            ui.notify('Please select a student', type='warning')
+                            return
+
+                        student_id = int(student_select_profile.value.split(':')[0])
+                        student = api.student_repo.get_by_id(student_id)
+
+                        # Clear previous profile
+                        profile_container.clear()
+
+                        with profile_container:
+                            # Basic Information Card
+                            with ui.card().classes('w-full'):
+                                ui.label('Basic Information').classes('text-lg font-bold mb-2')
+                                with ui.grid(columns=2).classes('w-full gap-2'):
+                                    ui.label('Student ID:').classes('font-semibold')
+                                    ui.label(str(student.student_id))
+
+                                    ui.label('Name:').classes('font-semibold')
+                                    ui.label(student.name)
+
+                                    ui.label('Date of Birth:').classes('font-semibold')
+                                    ui.label(student.date_of_birth or 'N/A')
+
+                                    ui.label('Contact Info:').classes('font-semibold')
+                                    ui.label(student.contact_info or 'N/A')
+
+                                    ui.label('Year of Study:').classes('font-semibold')
+                                    ui.label(str(student.year_of_study) if student.year_of_study else 'N/A')
+
+                                    ui.label('Graduation Status:').classes('font-semibold')
+                                    ui.label(student.graduation_status or 'N/A')
+
+                    ui.button('Load Profile', on_click= run_query_student_profile, icon='person_search')
+
+
 ui.run()
