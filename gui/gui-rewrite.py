@@ -1,9 +1,14 @@
+import atexit
 from nicegui import ui
 import pandas as pd
 
-from src.database import get_engine
+from src.database import get_engine, decrypt_database, encrypt_database
 from src.models import Base
 from src.services import APIService
+
+# Decrypt database on startup, encrypt on exit
+decrypt_database()
+atexit.register(encrypt_database)
 
 def init_database():
     engine = get_engine()
@@ -191,7 +196,7 @@ class CRUDService:
 
         idx = self.df[self.df[self.id_column] == id_value].index[0]
         for col, value in data.items():
-            self.df.at[idx, col] = value
+            self.df.at[idx, col] = type(self.df[col].iloc[0])(value)
         self.update_table()
         ui.notify(f'{self.entity_name} updated', type = 'positive')
 
@@ -252,6 +257,13 @@ def create_add_dialog(service):
                     label = col.replace('_',' ').title(),
                     value = str(next_id)
                 ).props('readonly')
+            elif col == 'head_lecturer_id':
+                available = api.lecturer_repo.get_available_head_lecturers()
+                inputs[col] = ui.select(
+                    label='Head Lecturer',
+                    options={l.lecturer_id: f"{l.lecturer_id}: {l.name}" for l in available},
+                    with_input=True
+                ).classes('w-full')
             else:
                 inputs[col] = ui.input(label=col.replace('_',' ').title())
 
@@ -324,7 +336,14 @@ def create_edit_dialog(service):
             entity_row = service.get_df()[service.get_df()[service.id_column] == id_int].iloc[0]
 
             for col in service.get_df().columns:
-                if col != service.id_column:
+                if col == service.id_column:
+                    continue
+                if col == 'head_lecturer_id':
+                    current_head = int(entity_row[col])
+                    available = api.lecturer_repo.get_available_head_lecturers(exclude_lecturer_id=current_head)
+                    inputs[col].options = {l.lecturer_id: f"{l.lecturer_id}: {l.name}" for l in available}
+                    inputs[col].value = current_head
+                else:
                     inputs[col].value = str(entity_row[col])
 
             ui.notify(f'Loaded {service.entity_name} {id_int}', type='positive')
@@ -343,7 +362,11 @@ def create_edit_dialog(service):
 
         # Create input fields for other columns
         for col in df.columns:
-            if col != service.id_column:
+            if col == service.id_column:
+                continue
+            if col == 'head_lecturer_id':
+                inputs[col] = ui.select(label='Head Lecturer', options={}, with_input=True).classes('w-full').props('disable')
+            else:
                 inputs[col] = ui.input(label=col.replace('_', ' ').title()).props('readonly')
 
         def enable_editing():
@@ -357,7 +380,11 @@ def create_edit_dialog(service):
                 return
 
             for col in service.get_df().columns:
-                if col != service.id_column:
+                if col == service.id_column:
+                    continue
+                if col == 'head_lecturer_id':
+                    inputs[col].props(remove='disable')
+                else:
                     inputs[col].props(remove='readonly')
 
         def save():

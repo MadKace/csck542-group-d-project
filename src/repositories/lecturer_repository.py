@@ -10,6 +10,7 @@ from src.models.lecturer import (
     LecturerResearchInterest,
     Publication,
 )
+from src.models.research import ResearchProject
 from src.models.tables import lecturer_course
 from src.repositories.base import BaseRepository
 
@@ -40,6 +41,32 @@ class LecturerRepository(BaseRepository[Lecturer]):
         stmt = (
             select(Lecturer)
             .where(Lecturer.dept_id == dept_id)
+            .order_by(Lecturer.name)
+        )
+        return list(self._session.scalars(stmt).all())
+
+    def get_available_head_lecturers(
+        self, exclude_lecturer_id: int | None = None
+    ) -> list[Lecturer]:
+        """Get lecturers not already heading a research project.
+
+        Args:
+            exclude_lecturer_id: Optionally exclude this lecturer from the filter
+                (useful when editing a project - the current head should still be available)
+
+        Returns:
+            List of lecturers who can be assigned as head of a research project.
+        """
+        # Subquery to get all lecturer IDs that are already head lecturers
+        head_lecturer_ids = select(ResearchProject.head_lecturer_id)
+        if exclude_lecturer_id is not None:
+            head_lecturer_ids = head_lecturer_ids.where(
+                ResearchProject.head_lecturer_id != exclude_lecturer_id
+            )
+
+        stmt = (
+            select(Lecturer)
+            .where(Lecturer.lecturer_id.not_in(head_lecturer_ids))
             .order_by(Lecturer.name)
         )
         return list(self._session.scalars(stmt).all())

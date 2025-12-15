@@ -239,3 +239,79 @@ INSERT INTO programme_course (programme_id, course_id, is_required) VALUES (2, 3
 INSERT INTO programme_course (programme_id, course_id, is_required) VALUES (2, 4, 1);
 INSERT INTO programme_course (programme_id, course_id, is_required) VALUES (6, 5, 1);
 INSERT INTO programme_course (programme_id, course_id, is_required) VALUES (6, 6, 1);
+
+-- Disciplinary records
+INSERT INTO disciplinary_record (student_id, incident_date, description, action_taken) VALUES (3, '2024-10-15', 'Late submission of coursework without prior approval', 'Written warning');
+INSERT INTO disciplinary_record (student_id, incident_date, description, action_taken) VALUES (7, '2024-09-20', 'Disruption during lecture', 'Verbal warning');
+INSERT INTO disciplinary_record (student_id, incident_date, description, action_taken) VALUES (12, '2024-11-05', 'Academic misconduct - suspected plagiarism', 'Under investigation');
+
+-- Lecturer research interests
+INSERT INTO lecturer_research_interest (lecturer_id, interest) VALUES (1, 'Deep Learning');
+INSERT INTO lecturer_research_interest (lecturer_id, interest) VALUES (1, 'Computer Vision');
+INSERT INTO lecturer_research_interest (lecturer_id, interest) VALUES (2, 'Database Optimisation');
+INSERT INTO lecturer_research_interest (lecturer_id, interest) VALUES (2, 'Big Data Systems');
+INSERT INTO lecturer_research_interest (lecturer_id, interest) VALUES (3, 'Wireless Networks');
+INSERT INTO lecturer_research_interest (lecturer_id, interest) VALUES (4, 'Cryptography');
+INSERT INTO lecturer_research_interest (lecturer_id, interest) VALUES (5, 'Natural Language Processing');
+INSERT INTO lecturer_research_interest (lecturer_id, interest) VALUES (6, 'Abstract Algebra');
+INSERT INTO lecturer_research_interest (lecturer_id, interest) VALUES (7, 'Bayesian Methods');
+INSERT INTO lecturer_research_interest (lecturer_id, interest) VALUES (8, 'Quantum Computing');
+
+-- Publications
+INSERT INTO publication (lecturer_id, title, journal, publication_date) VALUES (1, 'Advances in Neural Network Architectures for Image Recognition', 'IEEE Transactions on Neural Networks', '2024-03-15');
+INSERT INTO publication (lecturer_id, title, journal, publication_date) VALUES (1, 'Deep Learning Applications in Healthcare', 'Nature Machine Intelligence', '2024-06-20');
+INSERT INTO publication (lecturer_id, title, journal, publication_date) VALUES (2, 'Optimising Query Performance in Distributed Databases', 'ACM SIGMOD Record', '2024-01-10');
+INSERT INTO publication (lecturer_id, title, journal, publication_date) VALUES (3, 'Next-Generation Wireless Network Protocols', 'IEEE Communications Magazine', '2024-04-25');
+INSERT INTO publication (lecturer_id, title, journal, publication_date) VALUES (4, 'Post-Quantum Cryptographic Algorithms', 'Journal of Cryptology', '2024-02-18');
+INSERT INTO publication (lecturer_id, title, journal, publication_date) VALUES (5, 'Large Language Models in Education', 'Artificial Intelligence Review', '2024-05-30');
+INSERT INTO publication (lecturer_id, title, journal, publication_date) VALUES (6, 'Applications of Group Theory in Coding', 'Journal of Algebra', '2024-07-12');
+INSERT INTO publication (lecturer_id, title, journal, publication_date) VALUES (7, 'Statistical Methods for Climate Modelling', 'Journal of Statistical Planning', '2024-08-05');
+
+-- Course materials
+INSERT INTO course_material (course_id, title, material_type, url) VALUES (1, 'Introduction to Python Programming', 'lecture_slides', 'https://learn.university.ac.uk/cs101/week1');
+INSERT INTO course_material (course_id, title, material_type, url) VALUES (1, 'Python Basics Lab Exercise', 'lab_worksheet', 'https://learn.university.ac.uk/cs101/lab1');
+INSERT INTO course_material (course_id, title, material_type, url) VALUES (1, 'Getting Started with VS Code', 'video', 'https://learn.university.ac.uk/cs101/videos/vscode');
+INSERT INTO course_material (course_id, title, material_type, url) VALUES (2, 'Arrays and Linked Lists', 'lecture_slides', 'https://learn.university.ac.uk/cs201/week1');
+INSERT INTO course_material (course_id, title, material_type, url) VALUES (2, 'Data Structures Textbook Chapter 1-3', 'reading', 'https://learn.university.ac.uk/cs201/reading1');
+INSERT INTO course_material (course_id, title, material_type, url) VALUES (3, 'Introduction to SQL', 'lecture_slides', 'https://learn.university.ac.uk/cs301/week1');
+INSERT INTO course_material (course_id, title, material_type, url) VALUES (3, 'Database Design Principles', 'lecture_slides', 'https://learn.university.ac.uk/cs301/week2');
+INSERT INTO course_material (course_id, title, material_type, url) VALUES (3, 'SQL Practice Exercises', 'lab_worksheet', 'https://learn.university.ac.uk/cs301/lab1');
+INSERT INTO course_material (course_id, title, material_type, url) VALUES (4, 'Machine Learning Fundamentals', 'lecture_slides', 'https://learn.university.ac.uk/cs401/week1');
+INSERT INTO course_material (course_id, title, material_type, url) VALUES (5, 'Calculus Review Notes', 'reading', 'https://learn.university.ac.uk/ma101/notes');
+
+-- Department research areas
+INSERT INTO department_research_area (dept_id, area) VALUES (1, 'Artificial Intelligence');
+INSERT INTO department_research_area (dept_id, area) VALUES (1, 'Cybersecurity');
+INSERT INTO department_research_area (dept_id, area) VALUES (1, 'Software Engineering');
+INSERT INTO department_research_area (dept_id, area) VALUES (1, 'Human-Computer Interaction');
+INSERT INTO department_research_area (dept_id, area) VALUES (2, 'Applied Mathematics');
+INSERT INTO department_research_area (dept_id, area) VALUES (2, 'Pure Mathematics');
+INSERT INTO department_research_area (dept_id, area) VALUES (2, 'Statistics');
+INSERT INTO department_research_area (dept_id, area) VALUES (3, 'Quantum Physics');
+INSERT INTO department_research_area (dept_id, area) VALUES (3, 'Astrophysics');
+INSERT INTO department_research_area (dept_id, area) VALUES (4, 'Modern Literature');
+INSERT INTO department_research_area (dept_id, area) VALUES (4, 'Linguistics');
+INSERT INTO department_research_area (dept_id, area) VALUES (5, 'Finance');
+INSERT INTO department_research_area (dept_id, area) VALUES (5, 'Marketing');
+
+-- Project funding
+INSERT INTO project_funding (project_id, source_name, amount) VALUES (1, 'EPSRC Research Grant', 250000.00);
+INSERT INTO project_funding (project_id, source_name, amount) VALUES (1, 'Industry Partner - TechCorp', 75000.00);
+INSERT INTO project_funding (project_id, source_name, amount) VALUES (2, 'UKRI Future Leaders Fellowship', 180000.00);
+INSERT INTO project_funding (project_id, source_name, amount) VALUES (2, 'Green Computing Initiative', 50000.00);
+INSERT INTO project_funding (project_id, source_name, amount) VALUES (3, 'Royal Statistical Society Grant', 45000.00);
+
+-- Project outcomes
+INSERT INTO project_outcome (project_id, description, outcome_date) VALUES (1, 'Published paper on novel attention mechanisms in IEEE TNNLS', '2024-06-15');
+INSERT INTO project_outcome (project_id, description, outcome_date) VALUES (1, 'Filed patent for efficient neural network pruning technique', '2024-09-20');
+INSERT INTO project_outcome (project_id, description, outcome_date) VALUES (2, 'Developed prototype for energy-efficient data centre cooling', '2024-07-30');
+INSERT INTO project_outcome (project_id, description, outcome_date) VALUES (3, 'Created open-source statistical analysis toolkit', '2024-05-10');
+
+-- Research project members (students)
+INSERT INTO research_project_member (project_id, student_id) VALUES (1, 1);
+INSERT INTO research_project_member (project_id, student_id) VALUES (1, 2);
+INSERT INTO research_project_member (project_id, student_id) VALUES (1, 8);
+INSERT INTO research_project_member (project_id, student_id) VALUES (2, 3);
+INSERT INTO research_project_member (project_id, student_id) VALUES (2, 6);
+INSERT INTO research_project_member (project_id, student_id) VALUES (3, 7);
+INSERT INTO research_project_member (project_id, student_id) VALUES (3, 10);
