@@ -599,7 +599,7 @@ Entity Configurations
 Can now describe entities, thus modifying the behaviour of the panels and functions above
 """
 
-Entity_configs = [
+entity_configs = [
     {
         'key': 'students',
         'display_name': 'Student',
@@ -649,3 +649,44 @@ Entity_configs = [
         'label': 'Research Projects Records',
     },
 ]
+
+"""
+UI Build
+
+Can now build UI by referencing entity configs and functions above
+"""
+
+with ui.column().classes('w-full'):
+    # Create main tabs
+    with ui.tabs().classes('w-full') as main_tabs:
+        for config in entity_configs:
+            config['main_tab'] = ui.tab(
+                config['display_name'] + 's' if not config['key'] == 'staff' else config['display_name'])
+        tab_qr = ui.tab('Queries and Reports')
+
+    # Create entity panels
+    with ui.tab_panels(main_tabs).classes('w-full'):
+        for config in entity_configs:
+            with ui.tab_panel(config['main_tab']):
+                with ui.row().classes('w-full justify-center mb-4'):
+                    ui.label(config['label']).classes('text-xl')
+
+                # Create sub-tabs for view/manage
+                with ui.tabs().classes('w-full') as entity_ops:
+                    config['view_tab'] = ui.tab(f'View {config["label"]}')
+                    config['manage_tab'] = ui.tab(f'Manage {config["label"]}')
+
+                with ui.tab_panels(entity_ops).classes('w-full'):
+                    create_entity_panel(config)
+
+        # Queries and Reports panel
+        with ui.tab_panel(tab_qr):
+            with ui.row().classes('w-full justify-center mb-4'):
+                ui.label('Queries and Reports').classes('text-xl')
+            with ui.tabs().classes('w-full') as qr_ops:
+                tab_qr_view = ui.tab('View Queries and Reports')
+            with ui.tab_panels(qr_ops).classes('w-full'):
+                with ui.tab_panel(tab_qr_view).classes('w-full'):
+                    ui.label('TBA')
+
+ui.run()
