@@ -828,7 +828,30 @@ with ui.column().classes('w-full'):
                                 else:
                                     ui.label('No programme assigned')
 
+                            # Advisor Information Card
+                            with ui.card().classes('w-full'):
+                                ui.label('Advisor Information').classes('text-lg font-bold mb-2')
+                                if student.advisor_id:
+                                    try:
+                                        advisor = api.lecturer_repo.get_by_id(student.advisor_id)
+                                        with ui.grid(columns=2).classes('w-full gap-2'):
+                                            ui.label('Advisor:').classes('font-semibold')
+                                            ui.label(advisor.name)
+
+                                            if advisor.dept_id:
+                                                try:
+                                                    dept = api.department_repo.get_by_id(advisor.dept_id)
+                                                    ui.label('Department:').classes('font-semibold')
+                                                    ui.label(dept.name)
+                                                except:
+                                                    pass
+                                    except:
+                                        ui.label('Advisor information not available')
+                                else:
+                                    ui.label('No advisor assigned')
+
                     ui.button('Load Profile', on_click= run_query_student_profile, icon='person_search')
+
 
 
 ui.run()
