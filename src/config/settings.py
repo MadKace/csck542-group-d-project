@@ -31,6 +31,7 @@ class Settings:
     database_path: Path = field(default_factory=_get_default_db_path)
     foreign_keys_enabled: bool = True
     echo_sql: bool = False
+    encryption_key: str | None = field(default_factory=lambda: os.environ.get("DB_ENCRYPTION_KEY"))
 
     _instance: ClassVar["Settings | None"] = None
 
