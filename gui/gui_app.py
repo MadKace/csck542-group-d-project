@@ -143,6 +143,10 @@ with ui.column().classes('w-full'):
 
                                 refresh_student_dropdowns()
 
+                                next_student_id = get_next_student_id(all_students_df)
+                                new_student_inputs['student_id'].value = int(next_student_id)
+                                new_student_inputs['student_id'].update()
+
                             with ui.row().classes('gap-2 mt-4'):
                                 ui.button('Cancel', on_click=add_student_dialog.close)
                                 ui.button('Save', on_click=save_student)
