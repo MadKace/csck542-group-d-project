@@ -391,10 +391,10 @@ with ui.column().classes('w-full'):
 
                     def refresh_lecturer_dropdowns():
                         updated_options = sorted(all_lecturers_df['lecturer_id'].astype(str).tolist())
-                        edit_student_inputs['lecturer_id_selector'].options = updated_options
-                        edit_student_inputs['lecturer_id_selector'].update()
-                        delete_student_inputs['lecturer_id_selector'].options = updated_options
-                        delete_student_inputs['lecturer_id_selector'].update()
+                        edit_lecturer_inputs['lecturer_id_selector'].options = updated_options
+                        edit_lecturer_inputs['lecturer_id_selector'].update()
+                        delete_lecturer_inputs['lecturer_id_selector'].options = updated_options
+                        delete_lecturer_inputs['lecturer_id_selector'].update()
 
                     with ui.dialog() as add_lecturer_dialog:
                         with ui.card().classes('w-[400px]'):
@@ -1640,6 +1640,10 @@ with ui.column().classes('w-full'):
 
                                 tbl_view_projects.rows[:] = all_projects_df.to_dict('records')
                                 tbl_view_projects.update()
+
+                                next_project_id = get_next_project_id(all_projects_df)
+                                new_project_inputs['project_id'].value = int(next_project_id)
+                                new_project_inputs['project_id'].update()
 
                             with ui.row().classes('gap-2 mt-4'):
                                 ui.button('Cancel', on_click=add_project_dialog.close)
