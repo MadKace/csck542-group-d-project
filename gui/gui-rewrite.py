@@ -1125,4 +1125,70 @@ with ui.column().classes('w-full'):
 
                     ui.button('Load Publications', on_click=run_query_publications, icon='menu_book')
 
+            # Query 5: Final year students with high grades
+            with ui.expansion('High-Performing Final Year Students', icon='elevator').classes(
+                    'w-full mb-4'):
+                with ui.column().classes('w-full gap-4'):
+                    threshold_input = ui.number(
+                        label='Minimum Average Grade (%)',
+                        value=70,
+                        min=0,
+                        max=100,
+                        step=1
+                    ).classes('w-64')
+
+                    query4_result = ui.table(
+                        columns=[
+                            {'name': 'student_id', 'label': 'Student ID', 'field': 'student_id',
+                             'sortable': True},
+                            {'name': 'name', 'label': 'Name', 'field': 'name', 'sortable': True},
+                            {'name': 'programme_id', 'label': 'Programme ID', 'field': 'programme_id',
+                             'sortable': True},
+                            {'name': 'year_of_study', 'label': 'Year', 'field': 'year_of_study',
+                             'sortable': True},
+                            {'name': 'average_grade', 'label': 'Average Grade', 'field': 'average_grade',
+                             'sortable': True},
+                        ],
+                        rows=[],
+                        row_key='student_id'
+                    ).classes('w-full')
+
+
+                    def run_query_high_performance():
+                        threshold = threshold_input.value
+                        all_students = api.student_repo.get_all()
+
+                        # Get programmes to determine final year
+                        programmes = {p.programme_id: p for p in api.programme_repo.get_all()}
+
+                        results = []
+                        for student in all_students:
+                            # Check if student is in final year
+                            if student.programme_id and student.year_of_study:
+                                programme = programmes.get(student.programme_id)
+                                if programme and programme.duration_years:
+                                    is_final_year = student.year_of_study == programme.duration_years
+                                else:
+                                    # Assume 4 years if duration not specified
+                                    is_final_year = student.year_of_study == 4
+
+                                if is_final_year:
+                                    # Calculate average grade
+                                    grades = api.student_repo.get_grades(student.student_id)
+                                    if grades:
+                                        grade_values = [g.grade for g in grades if g.grade is not None]
+                                        if grade_values:
+                                            avg_grade = sum(grade_values) / len(grade_values)
+                                            if avg_grade >= threshold:
+                                                student_dict = student.as_dict
+                                                student_dict['average_grade'] = f"{avg_grade:.2f}%"
+                                                results.append(student_dict)
+
+                        query4_result.rows = results
+                        query4_result.update()
+                        ui.notify(f'Found {len(results)} student(s)', type='positive')
+
+
+                    ui.button('Run Query', on_click=run_query_high_performance, icon='play_arrow')
+
 ui.run()
