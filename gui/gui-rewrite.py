@@ -209,3 +209,63 @@ class CRUDService:
         self.update_table()
         self.refresh_dropdowns()
         ui.notify(f'{self.entity_name} deleted', type = 'positive')
+
+"""
+Dialog Factory
+
+Rather than have Create, Edit, Delete dialog boxes for each entity, it makes more sense to have a factory that can be
+called on for each entity configuration
+"""
+
+def create_add_dialog(service):
+    """
+        Creates a dialog box for adding a new entity
+        Arguments: service, aka for which entity
+        Returns: Appropriate Dialog box
+    """
+
+    dialog = ui.dialog()
+
+    with dialog, ui.card().classes('w-[400px]'):
+        ui.label(f'Add {service.entity_name}').classes('text-lg font-bold')
+
+        inputs = {}
+        df = service.get_df()
+
+        #Create input fields:
+        for col in df.columns:
+            if col == service.id_column:
+                next_id = get_next_id(df, service.id_column)
+                inputs[col] = ui.input(
+                    label = col.replace('_',' ').title(),
+                    value = str(next_id)
+                ).props('readonly')
+            else:
+                inputs[col] = ui.input(label=col.replace('_',' ').title())
+
+        def save():
+            """
+                Called by the Dialogue box for adding a new entity to save inputted data into data source
+                Arguments: None
+                Returns: Saved entity in data source
+            """
+            data = {col: inp.value for col, inp in inputs.items()}
+
+            #Validate fields using helper function:
+            is_valid, invalid_col = validate_fields(data, service.id_column)
+            if not is_valid:
+                ui.notify(f'{invalid_col.replace("_"," ").title()} cannot be blank', type = 'negative')
+                return
+            service.create(data)
+            dialog.close()
+
+            #Update ID for the next entry for the entity
+            next_id = get_next_id(service.get_df(), service.id_column)
+            inputs[service.id_column].value = str(next_id)
+            inputs[service.id_column].update()
+
+        with ui.row().classes('gap-2 mt-4'):
+            ui.button('Cancel', on_click = dialog.close)
+            ui.button('Save', on_click = save)
+
+    return dialog
