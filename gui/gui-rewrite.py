@@ -913,6 +913,79 @@ with ui.column().classes('w-full'):
                                 else:
                                     ui.label('No grades recorded')
 
+                            # Disciplinary Records Card
+                            with ui.card().classes('w-full'):
+                                ui.label('Disciplinary Records').classes('text-lg font-bold mb-2')
+
+                                disciplinary_records = api.student_repo.get_disciplinary_records(student_id)
+
+                                if disciplinary_records:
+                                    records_data = [{
+                                        'incident_date': r.incident_date or 'N/A',
+                                        'description': r.description or 'N/A',
+                                        'action_taken': r.action_taken or 'N/A'
+                                    } for r in disciplinary_records]
+
+                                    ui.table(
+                                        columns=[
+                                            {'name': 'incident_date', 'label': 'Date', 'field': 'incident_date',
+                                             'sortable': True},
+                                            {'name': 'description', 'label': 'Description',
+                                             'field': 'description', 'sortable': True},
+                                            {'name': 'action_taken', 'label': 'Action Taken',
+                                             'field': 'action_taken', 'sortable': True},
+                                        ],
+                                        rows=records_data,
+                                        row_key='incident_date'
+                                    ).classes('w-full')
+                                else:
+                                    ui.label('No disciplinary records').classes('text-green-600')
+
+                            # Research Projects Card
+                            with ui.card().classes('w-full'):
+                                ui.label('Research Projects').classes('text-lg font-bold mb-2')
+
+                                # Get all projects and check if student is a member
+                                all_projects = api.research_project_repo.get_all()
+                                student_projects = []
+
+                                for project in all_projects:
+                                    # Check if student is in this project
+                                    project_students = api.student_repo.get_by_research_project(
+                                        project.project_id)
+                                    if any(s.student_id == student_id for s in project_students):
+                                        try:
+                                            head_lecturer = api.lecturer_repo.get_by_id(
+                                                project.head_lecturer_id)
+                                            student_projects.append({
+                                                'title': project.title,
+                                                'head_lecturer': head_lecturer.name,
+                                                'start_date': project.start_date or 'N/A',
+                                                'end_date': project.end_date or 'N/A'
+                                            })
+                                        except:
+                                            pass
+
+                                if student_projects:
+                                    ui.table(
+                                        columns=[
+                                            {'name': 'title', 'label': 'Project Title', 'field': 'title',
+                                             'sortable': True},
+                                            {'name': 'head_lecturer', 'label': 'Head Lecturer',
+                                             'field': 'head_lecturer', 'sortable': True},
+                                            {'name': 'start_date', 'label': 'Start Date', 'field': 'start_date',
+                                             'sortable': True},
+                                            {'name': 'end_date', 'label': 'End Date', 'field': 'end_date',
+                                             'sortable': True},
+                                        ],
+                                        rows=student_projects,
+                                        row_key='title'
+                                    ).classes('w-full')
+                                else:
+                                    ui.label('Not involved in any research projects')
+
+                        ui.notify('Student profile loaded', type='positive')
+
 
                     ui.button('Load Profile', on_click= run_query_student_profile, icon='person_search')
 
