@@ -447,6 +447,12 @@ with ui.column().classes('w-full'):
                                 tbl_view_lecturers.rows[:] = all_lecturers_df.to_dict('records')
                                 tbl_view_lecturers.update()
 
+                                refresh_lecturer_dropdowns()
+
+                                next_lecturer_id = get_next_student_id(all_students_df)
+                                new_lecturer_inputs['lecturer_id'].value = int(next_lecturer_id)
+                                new_lecturer_inputs['lecturer_id'].update()
+
                             with ui.row().classes('gap-2 mt-4'):
                                 ui.button('Cancel', on_click=add_lecturer_dialog.close)
                                 ui.button('Save', on_click=save_lecturer)
@@ -565,7 +571,6 @@ with ui.column().classes('w-full'):
                             delete_lecturer_inputs = {}
                             delete_selected_lecturer_id = {'value': None}
 
-
                             # lecturer ID selector
                             def validate_and_load_lecturer_for_delete():
                                 delete_lecturer_id_value = delete_lecturer_inputs['lecturer_id_selector'].value
@@ -654,6 +659,7 @@ with ui.column().classes('w-full'):
                                 delete_lecturer_dialog.close()
                                 ui.notify('lecturer deleted successfully', type='positive')
 
+                                refresh_lecturer_dropdowns()
 
                             with ui.row().classes('gap-2 mt-4'):
                                 ui.button('Cancel', on_click=delete_lecturer_dialog.close)
