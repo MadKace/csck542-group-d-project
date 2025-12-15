@@ -592,3 +592,60 @@ def create_entity_panel(config):
             ui.button('Add', on_click=lambda: add_dialog.open())
             ui.button('Edit', on_click=lambda: edit_dialog.open())
             ui.button('Delete', on_click=lambda: delete_dialog.open(), color='red')
+
+"""
+Entity Configurations
+
+Can now describe entities, thus modifying the behaviour of the panels and functions above
+"""
+
+Entity_configs = [
+    {
+        'key': 'students',
+        'display_name': 'Student',
+        'df': all_students_df,
+        'repo': api.student_repo,
+        'id_column': 'student_id',
+        'label': 'Student Records',
+    },
+    {
+        'key': 'lecturers',
+        'display_name': 'Lecturer',
+        'df': all_lecturers_df,
+        'repo': api.lecturer_repo,
+        'id_column': 'lecturer_id',
+        'label': 'Lecturer Records',
+    },
+    {
+        'key': 'staff',
+        'display_name': 'Non-Academic Staff',
+        'df': all_staff_df,
+        'repo': api.staff_repo,
+        'id_column': 'staff_id',
+        'label': 'Non-Academic Staff Records',
+    },
+    {
+        'key': 'courses',
+        'display_name': 'Course',
+        'df': all_courses_df,
+        'repo': api.course_repo,
+        'id_column': 'course_id',
+        'label': 'Course Records',
+    },
+    {
+        'key': 'departments',
+        'display_name': 'Department',
+        'df': all_departments_df,
+        'repo': api.department_repo,
+        'id_column': 'dept_id',
+        'label': 'Departmental Records',
+    },
+    {
+        'key': 'research_projects',
+        'display_name': 'Research Project',
+        'df': all_projects_df,
+        'repo': api.research_project_repo,
+        'id_column': 'project_id',
+        'label': 'Research Projects Records',
+    },
+]
