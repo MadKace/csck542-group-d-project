@@ -79,6 +79,12 @@ def create_table_columns(df):
     ]
 
 def filter_dataframe(df, filters):
+    """
+        Returns a filtered entity dataframe
+        Arguments: entity dataframe, filters
+        Returns: filtered entity dataframe
+    """
+
     filtered_df = df.copy()
 
     for col, search_text in filters.items():
@@ -88,3 +94,118 @@ def filter_dataframe(df, filters):
             ]
 
     return filtered_df
+
+"""
+CRUD Service Class
+
+Originally, CRUD operations for each entity was going to be handled individually, however, it makes more sense to do 
+them via a service class that can handle it for any entity. This is due to the database design
+"""
+
+class CRUDService:
+    def __init__(self, entity_name, df, repo, id_column, table_widget):
+        """
+            initalises the CRUD service by defining self to the applicable entity
+            Arguments: self, entity name, entity df, entity repo, entity id_column, relevant table_widget
+            Returns: filtered entity dataframe
+        """
+        self.entity_name = entity_name
+        self.df = df
+        self.repo = repo
+        self.id_column = id_column
+        self.table_widget = table_widget
+        self.dropdown_widgets = []
+
+    def get_df(self):
+        """
+            Helper function to get the current entity dataframe
+            Arguments: self
+            Returns: current entity dataframe
+        """
+        return self.df
+
+    def set_df(self, df):
+        """
+            Helper function to set the current entity dataframe
+            Arguments: self, entity dataframe
+            Returns: current entity dataframe
+        """
+        self.df = df
+
+    def register_dropdown(self, dropdown):
+        """
+            Helper function to set the dropdown options
+            Arguments: self, relevant dropdown
+            Returns: addition to dropdown options
+        """
+        self.dropdown_widgets.append(dropdown)
+
+    def refresh_dropdowns(self):
+        """
+            Helper function to refresh dropdowns after an event
+            Arguments: self
+            Returns: Refreshes dropdowns
+        """
+        updated_options = sorted(self.df[self.id_column].astype(str).tolist())
+        for dropdown in self.dropdown_widgets:
+            dropdown.options = updated_options
+            dropdown.update()
+
+    def create(self, data):
+        """
+            Creates a new entity based on provided data
+            Arguments: self, entity data
+            Returns: entity
+        """
+        entity = self.repo.create(**data)
+        api.commit()
+
+        self.df = pd.concat([self.df, pd.DataFrame([entity.as_dict])], ignore_index=True)
+        self.update_table()
+        self.refresh_dropdowns()
+
+        ui.notify(f'{self.entity_name} created', type = 'positive')
+
+        return entity
+
+    def update(self, id_value, data):
+        """
+            Updates an entity based on provided data
+            Arguments: self, entity id_value, entity data
+            Returns: entity
+        """
+        entity = self.repo.update(id_value, **data)
+        api.commit()
+
+        idx = self.df[self.df[self.id_column] == id_value].index[0]
+        for col, value in data.items():
+            self.df.at[idx, col] = value
+        self.update_table()
+        ui.notify(f'{self.entity_name} updated', type = 'positive')
+
+        return entity
+
+    def update_table(self):
+        """
+            Updates an entity's table
+            Arguments: self
+            Returns: entity
+        """
+        self.table_widget.rows = self.df.to_dict('records')
+        self.table_widget.update()
+
+    def delete(self, id_value):
+        """
+        Deletes an entity based on provided id_value
+        Arguments: self, entity id_value
+        Returns: None, the entity is deleted
+        """
+        self.repo.delete(id_value)
+        api.commit()
+
+        self.df = self.df[self.df[self.id_column] != id_value]
+        self.df.reset_index(drop=True, inplace=True)
+
+        self.update_table()
+        self.refresh_dropdowns()
+        ui.notify(f'{self.entity_name} deleted', type = 'positive')
