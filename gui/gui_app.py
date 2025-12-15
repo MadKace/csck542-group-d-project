@@ -388,6 +388,14 @@ with ui.column().classes('w-full'):
                         row_key='lecturer_id',
                     ).classes('w-full border border-black text-black bg-white')
                 with ui.tab_panel(tab_lecturers_manage).classes('w-full'):
+
+                    def refresh_lecturer_dropdowns():
+                        updated_options = sorted(all_lecturers_df['lecturer_id'].astype(str).tolist())
+                        edit_student_inputs['lecturer_id_selector'].options = updated_options
+                        edit_student_inputs['lecturer_id_selector'].update()
+                        delete_student_inputs['lecturer_id_selector'].options = updated_options
+                        delete_student_inputs['lecturer_id_selector'].update()
+
                     with ui.dialog() as add_lecturer_dialog:
                         with ui.card().classes('w-[400px]'):
                             ui.label('Add Lecturer').classes('text-lg font-bold')
