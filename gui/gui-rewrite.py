@@ -683,7 +683,7 @@ with ui.column().classes('w-full'):
         with ui.tab_panel(tab_qr):
             with ui.row().classes('w-full justify-center mb-4'):
                 ui.label('Queries and Reports').classes('text-xl')
-            #Query 1: Students advised by a lecturer:
+            # Query 1: Students advised by a lecturer:
             with ui.expansion('Students Advised by Lecturer', icon='school').classes('w-full mb-4'):
                 with ui.column().classes('w-full gap-4'):
                     lecturer_select = ui.select(
@@ -713,11 +713,49 @@ with ui.column().classes('w-full'):
                         lecturer_id = int(lecturer_select.value.split(':')[0])
                         students = api.student_repo.get_by_advisor(lecturer_id)
 
-                        query1_result.rows = [s.as_dict for s in students]
-                        query1_result.update()
+                        query_students_advised_by_lecturer_result.rows = [s.as_dict for s in students]
+                        query_students_advised_by_lecturer_result.update()
                         ui.notify(f'Found {len(students)} student(s)', type='positive')
 
 
                     ui.button('Run Query', on_click=run_query_students_advised_by_lecturer, icon='play_arrow')
+
+
+            #Query 2: All courses taught by a lecturer
+            with ui.expansion('Courses Taught by Departments', icon='class').classes('w-full mb-4'):
+                with ui.column().classes('w-full gap-4'):
+                    dept_select = ui.select(
+                        label='Select Department',
+                        options=[f"{d.dept_id}: {d.name}" for d in api.department_repo.get_all()],
+                        with_input=True
+                    ).classes('w-full')
+
+                    query_courses_by_department_result = ui.table(
+                        columns=[
+                            {'name': 'course_id', 'label': 'Course ID', 'field': 'course_id', 'sortable': True},
+                            {'name': 'course_code', 'label': 'Code', 'field': 'course_code', 'sortable': True},
+                            {'name': 'name', 'label': 'Name', 'field': 'name', 'sortable': True},
+                            {'name': 'level', 'label': 'Level', 'field': 'level', 'sortable': True},
+                            {'name': 'credits', 'label': 'Credits', 'field': 'credits', 'sortable': True},
+                        ],
+                        rows=[],
+                        row_key='course_id'
+                    ).classes('w-full')
+
+
+                    def query_courses_by_department():
+                        if not dept_select.value:
+                            ui.notify('Please select a department', type='warning')
+                            return
+
+                        dept_id = int(dept_select.value.split(':')[0])
+                        courses = api.course_repo.get_by_department_lecturers(dept_id)
+
+                        query_courses_by_department_result.rows = [c.as_dict for c in courses]
+                        query_courses_by_department_result.update()
+                        ui.notify(f'Found {len(courses)} course(s)', type='positive')
+
+
+                    ui.button('Run Query', on_click=query_courses_by_department, icon='play_arrow')
 
 ui.run()
