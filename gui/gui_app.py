@@ -1,14 +1,10 @@
-import atexit
-from nicegui import ui
+from nicegui import app, ui
 import pandas as pd
 
-from src.database import get_engine, decrypt_database, encrypt_database
+from src.database import encrypt_database, get_engine
 from src.models import Base
 from src.services import APIService
 
-# Decrypt database on startup, encrypt on exit
-decrypt_database()
-atexit.register(encrypt_database)
 
 def init_database():
     engine = get_engine()
@@ -18,6 +14,15 @@ if  __name__ == '__main__':
     init_database()
 
 api = APIService()
+
+
+def _shutdown_cleanup() -> None:
+    """Clean up on application shutdown - close API and encrypt database."""
+    api.close()
+    encrypt_database()
+
+
+app.on_shutdown(_shutdown_cleanup)
 
 # Load all data from repositories
 
@@ -712,510 +717,515 @@ UI Build
 Can now build UI by referencing entity configs and functions above
 """
 
-with ui.column().classes('w-full'):
-    # Create main tabs
-    with ui.tabs().classes('w-full') as main_tabs:
-        for config in entity_configs:
-            config['main_tab'] = ui.tab(
-                config['display_name'] + 's' if not config['key'] == 'staff' else config['display_name'])
-        tab_qr = ui.tab('Queries and Reports')
+@ui.page('/')
+def index_page():
+    """Build the main page UI."""
+    with ui.column().classes('w-full'):
+        # Create main tabs
+        with ui.tabs().classes('w-full') as main_tabs:
+            for config in entity_configs:
+                config['main_tab'] = ui.tab(
+                    config['display_name'] + 's' if not config['key'] == 'staff' else config['display_name'])
+            tab_qr = ui.tab('Queries and Reports')
 
-    # Create entity panels
-    with ui.tab_panels(main_tabs).classes('w-full'):
-        for config in entity_configs:
-            with ui.tab_panel(config['main_tab']):
+        # Create entity panels
+        with ui.tab_panels(main_tabs).classes('w-full'):
+            for config in entity_configs:
+                with ui.tab_panel(config['main_tab']):
+                    with ui.row().classes('w-full justify-center mb-4'):
+                        ui.label(config['label']).classes('text-xl')
+
+                    # Create sub-tabs for view/manage
+                    with ui.tabs().classes('w-full') as entity_ops:
+                        config['view_tab'] = ui.tab(f'View {config["label"]}')
+                        config['manage_tab'] = ui.tab(f'Manage {config["label"]}')
+
+                    with ui.tab_panels(entity_ops).classes('w-full'):
+                        create_entity_panel(config)
+
+            # Queries and Reports panel
+            with ui.tab_panel(tab_qr):
                 with ui.row().classes('w-full justify-center mb-4'):
-                    ui.label(config['label']).classes('text-xl')
+                    ui.label('Queries and Reports').classes('text-xl')
+                # Query 1: Students advised by a lecturer:
+                with ui.expansion('Students Advised by Lecturer', icon='school').classes('w-full mb-4'):
+                    with ui.column().classes('w-full gap-4'):
+                        lecturer_select = ui.select(
+                            label='Select Lecturer',
+                            options=[f"{l.lecturer_id}: {l.name}" for l in api.lecturer_repo.get_all()],
+                            with_input=True
+                        ).classes('w-full')
 
-                # Create sub-tabs for view/manage
-                with ui.tabs().classes('w-full') as entity_ops:
-                    config['view_tab'] = ui.tab(f'View {config["label"]}')
-                    config['manage_tab'] = ui.tab(f'Manage {config["label"]}')
-
-                with ui.tab_panels(entity_ops).classes('w-full'):
-                    create_entity_panel(config)
-
-        # Queries and Reports panel
-        with ui.tab_panel(tab_qr):
-            with ui.row().classes('w-full justify-center mb-4'):
-                ui.label('Queries and Reports').classes('text-xl')
-            # Query 1: Students advised by a lecturer:
-            with ui.expansion('Students Advised by Lecturer', icon='school').classes('w-full mb-4'):
-                with ui.column().classes('w-full gap-4'):
-                    lecturer_select = ui.select(
-                        label='Select Lecturer',
-                        options=[f"{l.lecturer_id}: {l.name}" for l in api.lecturer_repo.get_all()],
-                        with_input=True
-                    ).classes('w-full')
-
-                    query_students_advised_by_lecturer_result = ui.table(
-                        columns=[
-                            {'name': 'student_id', 'label': 'Student ID', 'field': 'student_id', 'sortable': True},
-                            {'name': 'name', 'label': 'Name', 'field': 'name', 'sortable': True},
-                            {'name': 'programme_id', 'label': 'Programme ID', 'field': 'programme_id',
-                             'sortable': True},
-                            {'name': 'year_of_study', 'label': 'Year', 'field': 'year_of_study', 'sortable': True},
-                        ],
-                        rows=[],
-                        row_key='student_id'
-                    ).classes('w-full')
+                        query_students_advised_by_lecturer_result = ui.table(
+                            columns=[
+                                {'name': 'student_id', 'label': 'Student ID', 'field': 'student_id', 'sortable': True},
+                                {'name': 'name', 'label': 'Name', 'field': 'name', 'sortable': True},
+                                {'name': 'programme_id', 'label': 'Programme ID', 'field': 'programme_id',
+                                 'sortable': True},
+                                {'name': 'year_of_study', 'label': 'Year', 'field': 'year_of_study', 'sortable': True},
+                            ],
+                            rows=[],
+                            row_key='student_id'
+                        ).classes('w-full')
 
 
-                    def run_query_students_advised_by_lecturer():
-                        """
-                            Runs query for students advised by selected lecturer
-                            Arguments: None
-                            Returns: Students advised by selected lecturer
-                        """
-                        if not lecturer_select.value:
-                            ui.notify('Please select a lecturer', type='warning')
-                            return
+                        def run_query_students_advised_by_lecturer():
+                            """
+                                Runs query for students advised by selected lecturer
+                                Arguments: None
+                                Returns: Students advised by selected lecturer
+                            """
+                            if not lecturer_select.value:
+                                ui.notify('Please select a lecturer', type='warning')
+                                return
 
-                        lecturer_id = int(lecturer_select.value.split(':')[0])
-                        students = api.student_repo.get_by_advisor(lecturer_id)
+                            lecturer_id = int(lecturer_select.value.split(':')[0])
+                            students = api.student_repo.get_by_advisor(lecturer_id)
 
-                        query_students_advised_by_lecturer_result.rows = [s.as_dict for s in students]
-                        query_students_advised_by_lecturer_result.update()
-                        ui.notify(f'Found {len(students)} student(s)', type='positive')
-
-
-                    ui.button('Run Query', on_click=run_query_students_advised_by_lecturer, icon='play_arrow')
+                            query_students_advised_by_lecturer_result.rows = [s.as_dict for s in students]
+                            query_students_advised_by_lecturer_result.update()
+                            ui.notify(f'Found {len(students)} student(s)', type='positive')
 
 
-            #Query 2: All courses taught by a lecturer
-            with ui.expansion('Courses Taught by Departments', icon='class').classes('w-full mb-4'):
-                with ui.column().classes('w-full gap-4'):
-                    dept_select = ui.select(
-                        label='Select Department',
-                        options=[f"{d.dept_id}: {d.name}" for d in api.department_repo.get_all()],
-                        with_input=True
-                    ).classes('w-full')
-
-                    query_courses_by_department_result = ui.table(
-                        columns=[
-                            {'name': 'course_id', 'label': 'Course ID', 'field': 'course_id', 'sortable': True},
-                            {'name': 'course_code', 'label': 'Code', 'field': 'course_code', 'sortable': True},
-                            {'name': 'name', 'label': 'Name', 'field': 'name', 'sortable': True},
-                            {'name': 'level', 'label': 'Level', 'field': 'level', 'sortable': True},
-                            {'name': 'credits', 'label': 'Credits', 'field': 'credits', 'sortable': True},
-                        ],
-                        rows=[],
-                        row_key='course_id'
-                    ).classes('w-full')
+                        ui.button('Run Query', on_click=run_query_students_advised_by_lecturer, icon='play_arrow')
 
 
-                    def query_courses_by_department():
-                        """
-                            Runs query for courses offered by selected department
-                            Arguments: None
-                            Returns: Students advised by selected lecturer
-                        """
-                        if not dept_select.value:
-                            ui.notify('Please select a department', type='warning')
-                            return
+                #Query 2: All courses taught by a lecturer
+                with ui.expansion('Courses Taught by Departments', icon='class').classes('w-full mb-4'):
+                    with ui.column().classes('w-full gap-4'):
+                        dept_select = ui.select(
+                            label='Select Department',
+                            options=[f"{d.dept_id}: {d.name}" for d in api.department_repo.get_all()],
+                            with_input=True
+                        ).classes('w-full')
 
-                        dept_id = int(dept_select.value.split(':')[0])
-                        courses = api.course_repo.get_by_department_lecturers(dept_id)
+                        query_courses_by_department_result = ui.table(
+                            columns=[
+                                {'name': 'course_id', 'label': 'Course ID', 'field': 'course_id', 'sortable': True},
+                                {'name': 'course_code', 'label': 'Code', 'field': 'course_code', 'sortable': True},
+                                {'name': 'name', 'label': 'Name', 'field': 'name', 'sortable': True},
+                                {'name': 'level', 'label': 'Level', 'field': 'level', 'sortable': True},
+                                {'name': 'credits', 'label': 'Credits', 'field': 'credits', 'sortable': True},
+                            ],
+                            rows=[],
+                            row_key='course_id'
+                        ).classes('w-full')
 
-                        query_courses_by_department_result.rows = [c.as_dict for c in courses]
-                        query_courses_by_department_result.update()
-                        ui.notify(f'Found {len(courses)} course(s)', type='positive')
+
+                        def query_courses_by_department():
+                            """
+                                Runs query for courses offered by selected department
+                                Arguments: None
+                                Returns: Students advised by selected lecturer
+                            """
+                            if not dept_select.value:
+                                ui.notify('Please select a department', type='warning')
+                                return
+
+                            dept_id = int(dept_select.value.split(':')[0])
+                            courses = api.course_repo.get_by_department_lecturers(dept_id)
+
+                            query_courses_by_department_result.rows = [c.as_dict for c in courses]
+                            query_courses_by_department_result.update()
+                            ui.notify(f'Found {len(courses)} course(s)', type='positive')
 
 
-                    ui.button('Run Query', on_click=query_courses_by_department, icon='play_arrow')
+                        ui.button('Run Query', on_click=query_courses_by_department, icon='play_arrow')
 
-            # Query 3 - Complete Student Profile
-            with ui.expansion('Complete Student Profile', icon='person_search').classes('w-full mb-4'):
-                with ui.column().classes('w-full gap-4'):
-                    student_select_profile = ui.select(
-                        label = 'Select Student',
-                        options=[f"{s.student_id}:{s.name}" for s in api.student_repo.get_all()],
-                        with_input = True
-                    ).classes('w-full')
+                # Query 3 - Complete Student Profile
+                with ui.expansion('Complete Student Profile', icon='person_search').classes('w-full mb-4'):
+                    with ui.column().classes('w-full gap-4'):
+                        student_select_profile = ui.select(
+                            label = 'Select Student',
+                            options=[f"{s.student_id}:{s.name}" for s in api.student_repo.get_all()],
+                            with_input = True
+                        ).classes('w-full')
 
-                    # A container for student profile information
+                        # A container for student profile information
 
-                    profile_container = ui.column().classes('w-full gap-4')
+                        profile_container = ui.column().classes('w-full gap-4')
 
-                    def run_query_student_profile():
-                        """
-                            Runs a series of queries to gather a complete picture of a student's performance
-                            Arguments: None
-                            Returns: All information relevant about a student
-                        """
-                        if not student_select_profile.value:
-                            ui.notify('Please select a student', type='warning')
-                            return
+                        def run_query_student_profile():
+                            """
+                                Runs a series of queries to gather a complete picture of a student's performance
+                                Arguments: None
+                                Returns: All information relevant about a student
+                            """
+                            if not student_select_profile.value:
+                                ui.notify('Please select a student', type='warning')
+                                return
 
-                        student_id = int(student_select_profile.value.split(':')[0])
-                        student = api.student_repo.get_by_id(student_id)
+                            student_id = int(student_select_profile.value.split(':')[0])
+                            student = api.student_repo.get_by_id(student_id)
 
-                        # Clear previous profile
-                        profile_container.clear()
+                            # Clear previous profile
+                            profile_container.clear()
 
-                        with profile_container:
-                            # Basic Information Card
-                            with ui.card().classes('w-full'):
-                                ui.label('Basic Information').classes('text-lg font-bold mb-2')
-                                with ui.grid(columns=2).classes('w-full gap-2'):
-                                    ui.label('Student ID:').classes('font-semibold')
-                                    ui.label(str(student.student_id))
+                            with profile_container:
+                                # Basic Information Card
+                                with ui.card().classes('w-full'):
+                                    ui.label('Basic Information').classes('text-lg font-bold mb-2')
+                                    with ui.grid(columns=2).classes('w-full gap-2'):
+                                        ui.label('Student ID:').classes('font-semibold')
+                                        ui.label(str(student.student_id))
 
-                                    ui.label('Name:').classes('font-semibold')
-                                    ui.label(student.name)
+                                        ui.label('Name:').classes('font-semibold')
+                                        ui.label(student.name)
 
-                                    ui.label('Date of Birth:').classes('font-semibold')
-                                    ui.label(student.date_of_birth or 'N/A')
+                                        ui.label('Date of Birth:').classes('font-semibold')
+                                        ui.label(student.date_of_birth or 'N/A')
 
-                                    ui.label('Contact Info:').classes('font-semibold')
-                                    ui.label(student.contact_info or 'N/A')
+                                        ui.label('Contact Info:').classes('font-semibold')
+                                        ui.label(student.contact_info or 'N/A')
 
-                                    ui.label('Year of Study:').classes('font-semibold')
-                                    ui.label(str(student.year_of_study) if student.year_of_study else 'N/A')
+                                        ui.label('Year of Study:').classes('font-semibold')
+                                        ui.label(str(student.year_of_study) if student.year_of_study else 'N/A')
 
-                                    ui.label('Graduation Status:').classes('font-semibold')
-                                    ui.label(student.graduation_status or 'N/A')
+                                        ui.label('Graduation Status:').classes('font-semibold')
+                                        ui.label(student.graduation_status or 'N/A')
 
-                            # Programme Information Card
-                            with ui.card().classes('w-full'):
-                                ui.label('Programme Information').classes('text-lg font-bold mb-2')
-                                if student.programme_id:
-                                    try:
-                                        programme = api.programme_repo.get_by_id(student.programme_id)
-                                        with ui.grid(columns=2).classes('w-full gap-2'):
-                                            ui.label('Programme:').classes('font-semibold')
-                                            ui.label(programme.name)
-
-                                            ui.label('Degree Awarded:').classes('font-semibold')
-                                            ui.label(programme.degree_awarded or 'N/A')
-
-                                            ui.label('Duration:').classes('font-semibold')
-                                            ui.label(
-                                                f"{programme.duration_years} years" if programme.duration_years else 'N/A')
-
-                                            ui.label('Enrolment Details:').classes('font-semibold')
-                                            ui.label(programme.enrolment_details or 'N/A')
-                                    except:
-                                        ui.label('Programme information not available')
-                                else:
-                                    ui.label('No programme assigned')
-
-                            # Advisor Information Card
-                            with ui.card().classes('w-full'):
-                                ui.label('Advisor Information').classes('text-lg font-bold mb-2')
-                                if student.advisor_id:
-                                    try:
-                                        advisor = api.lecturer_repo.get_by_id(student.advisor_id)
-                                        with ui.grid(columns=2).classes('w-full gap-2'):
-                                            ui.label('Advisor:').classes('font-semibold')
-                                            ui.label(advisor.name)
-
-                                            if advisor.dept_id:
-                                                try:
-                                                    dept = api.department_repo.get_by_id(advisor.dept_id)
-                                                    ui.label('Department:').classes('font-semibold')
-                                                    ui.label(dept.name)
-                                                except:
-                                                    pass
-                                    except:
-                                        ui.label('Advisor information not available')
-                                else:
-                                    ui.label('No advisor assigned')
-
-                            # Courses and Grades Card
-                            with ui.card().classes('w-full'):
-                                ui.label('Courses and Grades').classes('text-lg font-bold mb-2')
-
-                                # Get all grades for the student
-                                grades = api.student_repo.get_grades(student_id)
-
-                                if grades:
-                                    # Group grades by course
-                                    course_grades = {}
-                                    for grade in grades:
-                                        if grade.course_id not in course_grades:
-                                            course_grades[grade.course_id] = []
-                                        course_grades[grade.course_id].append(grade)
-
-                                    course_data = []
-                                    overall_grades = []
-
-                                    for course_id, grade_list in course_grades.items():
+                                # Programme Information Card
+                                with ui.card().classes('w-full'):
+                                    ui.label('Programme Information').classes('text-lg font-bold mb-2')
+                                    if student.programme_id:
                                         try:
-                                            course = api.course_repo.get_by_id(course_id)
-                                            grade_values = [g.grade for g in grade_list if g.grade is not None]
+                                            programme = api.programme_repo.get_by_id(student.programme_id)
+                                            with ui.grid(columns=2).classes('w-full gap-2'):
+                                                ui.label('Programme:').classes('font-semibold')
+                                                ui.label(programme.name)
 
+                                                ui.label('Degree Awarded:').classes('font-semibold')
+                                                ui.label(programme.degree_awarded or 'N/A')
+
+                                                ui.label('Duration:').classes('font-semibold')
+                                                ui.label(
+                                                    f"{programme.duration_years} years" if programme.duration_years else 'N/A')
+
+                                                ui.label('Enrolment Details:').classes('font-semibold')
+                                                ui.label(programme.enrolment_details or 'N/A')
+                                        except:
+                                            ui.label('Programme information not available')
+                                    else:
+                                        ui.label('No programme assigned')
+
+                                # Advisor Information Card
+                                with ui.card().classes('w-full'):
+                                    ui.label('Advisor Information').classes('text-lg font-bold mb-2')
+                                    if student.advisor_id:
+                                        try:
+                                            advisor = api.lecturer_repo.get_by_id(student.advisor_id)
+                                            with ui.grid(columns=2).classes('w-full gap-2'):
+                                                ui.label('Advisor:').classes('font-semibold')
+                                                ui.label(advisor.name)
+
+                                                if advisor.dept_id:
+                                                    try:
+                                                        dept = api.department_repo.get_by_id(advisor.dept_id)
+                                                        ui.label('Department:').classes('font-semibold')
+                                                        ui.label(dept.name)
+                                                    except:
+                                                        pass
+                                        except:
+                                            ui.label('Advisor information not available')
+                                    else:
+                                        ui.label('No advisor assigned')
+
+                                # Courses and Grades Card
+                                with ui.card().classes('w-full'):
+                                    ui.label('Courses and Grades').classes('text-lg font-bold mb-2')
+
+                                    # Get all grades for the student
+                                    grades = api.student_repo.get_grades(student_id)
+
+                                    if grades:
+                                        # Group grades by course
+                                        course_grades = {}
+                                        for grade in grades:
+                                            if grade.course_id not in course_grades:
+                                                course_grades[grade.course_id] = []
+                                            course_grades[grade.course_id].append(grade)
+
+                                        course_data = []
+                                        overall_grades = []
+
+                                        for course_id, grade_list in course_grades.items():
+                                            try:
+                                                course = api.course_repo.get_by_id(course_id)
+                                                grade_values = [g.grade for g in grade_list if g.grade is not None]
+
+                                                if grade_values:
+                                                    avg_grade = sum(grade_values) / len(grade_values)
+                                                    overall_grades.append(avg_grade)
+
+                                                    course_data.append({
+                                                        'course_code': course.course_code,
+                                                        'course_name': course.name,
+                                                        'num_assessments': len(grade_values),
+                                                        'average_grade': f"{avg_grade:.2f}%",
+                                                        'credits': course.credits or 'N/A'
+                                                    })
+                                            except:
+                                                pass
+
+                                        # Display overall average
+                                        if overall_grades:
+                                            overall_avg = sum(overall_grades) / len(overall_grades)
+                                            ui.label(f'Overall Average Grade: {overall_avg:.2f}%').classes(
+                                                'text-lg font-semibold text-blue-600 mb-3')
+
+                                        # Display course table
+                                        ui.table(
+                                            columns=[
+                                                {'name': 'course_code', 'label': 'Code', 'field': 'course_code',
+                                                 'sortable': True},
+                                                {'name': 'course_name', 'label': 'Course', 'field': 'course_name',
+                                                 'sortable': True},
+                                                {'name': 'num_assessments', 'label': 'Assessments',
+                                                 'field': 'num_assessments', 'sortable': True},
+                                                {'name': 'average_grade', 'label': 'Average',
+                                                 'field': 'average_grade', 'sortable': True},
+                                                {'name': 'credits', 'label': 'Credits', 'field': 'credits',
+                                                 'sortable': True},
+                                            ],
+                                            rows=course_data,
+                                            row_key='course_code'
+                                        ).classes('w-full')
+                                    else:
+                                        ui.label('No grades recorded')
+
+                                # Disciplinary Records Card
+                                with ui.card().classes('w-full'):
+                                    ui.label('Disciplinary Records').classes('text-lg font-bold mb-2')
+
+                                    disciplinary_records = api.student_repo.get_disciplinary_records(student_id)
+
+                                    if disciplinary_records:
+                                        records_data = [{
+                                            'incident_date': r.incident_date or 'N/A',
+                                            'description': r.description or 'N/A',
+                                            'action_taken': r.action_taken or 'N/A'
+                                        } for r in disciplinary_records]
+
+                                        ui.table(
+                                            columns=[
+                                                {'name': 'incident_date', 'label': 'Date', 'field': 'incident_date',
+                                                 'sortable': True},
+                                                {'name': 'description', 'label': 'Description',
+                                                 'field': 'description', 'sortable': True},
+                                                {'name': 'action_taken', 'label': 'Action Taken',
+                                                 'field': 'action_taken', 'sortable': True},
+                                            ],
+                                            rows=records_data,
+                                            row_key='incident_date'
+                                        ).classes('w-full')
+                                    else:
+                                        ui.label('No disciplinary records').classes('text-green-600')
+
+                                # Research Projects Card
+                                with ui.card().classes('w-full'):
+                                    ui.label('Research Projects').classes('text-lg font-bold mb-2')
+
+                                    # Get all projects and check if student is a member
+                                    all_projects = api.research_project_repo.get_all()
+                                    student_projects = []
+
+                                    for project in all_projects:
+                                        # Check if student is in this project
+                                        project_students = api.student_repo.get_by_research_project(
+                                            project.project_id)
+                                        if any(s.student_id == student_id for s in project_students):
+                                            try:
+                                                head_lecturer = api.lecturer_repo.get_by_id(
+                                                    project.head_lecturer_id)
+                                                student_projects.append({
+                                                    'title': project.title,
+                                                    'head_lecturer': head_lecturer.name,
+                                                    'start_date': project.start_date or 'N/A',
+                                                    'end_date': project.end_date or 'N/A'
+                                                })
+                                            except:
+                                                pass
+
+                                    if student_projects:
+                                        ui.table(
+                                            columns=[
+                                                {'name': 'title', 'label': 'Project Title', 'field': 'title',
+                                                 'sortable': True},
+                                                {'name': 'head_lecturer', 'label': 'Head Lecturer',
+                                                 'field': 'head_lecturer', 'sortable': True},
+                                                {'name': 'start_date', 'label': 'Start Date', 'field': 'start_date',
+                                                 'sortable': True},
+                                                {'name': 'end_date', 'label': 'End Date', 'field': 'end_date',
+                                                 'sortable': True},
+                                            ],
+                                            rows=student_projects,
+                                            row_key='title'
+                                        ).classes('w-full')
+                                    else:
+                                        ui.label('Not involved in any research projects')
+
+                            ui.notify('Student profile loaded', type='positive')
+
+                        ui.button('Load Profile', on_click= run_query_student_profile, icon='person_search')
+
+                # Query 4 - Lecturer Publications
+                with ui.expansion('Lecturer Publications', icon='article').classes('w-full mb-4'):
+                    with ui.column().classes('w-full gap-4'):
+                        lecturer_select_pubs = ui.select(
+                            label='Select Lecturer',
+                            options=[f"{l.lecturer_id}: {l.name}" for l in api.lecturer_repo.get_all()],
+                            with_input=True
+                        ).classes('w-full')
+
+                        # Container for lecturer info and publications
+                        publications_container = ui.column().classes('w-full gap-4')
+
+
+                        def run_query_publications():
+                            """
+                                Runs a series of queries to gather a complete picture of a lecturer's publications.
+                                Arguments: None
+                                Returns: All information relevant about a lecturer's publications
+                            """
+                            if not lecturer_select_pubs.value:
+                                ui.notify('Please select a lecturer', type='warning')
+                                return
+
+                            lecturer_id = int(lecturer_select_pubs.value.split(':')[0])
+                            lecturer = api.lecturer_repo.get_by_id(lecturer_id)
+                            publications = api.lecturer_repo.get_publications(lecturer_id)
+
+                            # Clear previous content
+                            publications_container.clear()
+
+                            with publications_container:
+                                # Lecturer Info Card
+                                with ui.card().classes('w-full'):
+                                    ui.label(f'{lecturer.name}').classes('text-xl font-bold mb-2')
+                                    with ui.grid(columns=2).classes('w-full gap-2'):
+                                        ui.label('Lecturer ID:').classes('font-semibold')
+                                        ui.label(str(lecturer.lecturer_id))
+
+                                        if lecturer.dept_id:
+                                            try:
+                                                dept = api.department_repo.get_by_id(lecturer.dept_id)
+                                                ui.label('Department:').classes('font-semibold')
+                                                ui.label(dept.name)
+                                            except:
+                                                pass
+
+                                        ui.label('Course Load:').classes('font-semibold')
+                                        ui.label(str(lecturer.course_load) if lecturer.course_load else 'N/A')
+
+                                        ui.label('Total Publications:').classes('font-semibold')
+                                        ui.label(str(len(publications))).classes('text-blue-600 font-bold')
+
+                                # Publications Card
+                                with ui.card().classes('w-full'):
+                                    ui.label('Publications').classes('text-lg font-bold mb-2')
+
+                                    if publications:
+                                        # Create table data
+                                        pubs_data = []
+                                        for pub in publications:
+                                            pubs_data.append({
+                                                'title': pub.title,
+                                                'journal': pub.journal or 'N/A',
+                                                'publication_date': pub.publication_date or 'N/A',
+                                                'publication_id': pub.publication_id
+                                            })
+
+                                        # Sort by date (most recent first)
+                                        pubs_data.sort(
+                                            key=lambda x: x['publication_date'] if x['publication_date'] != 'N/A' else '',
+                                            reverse=True)
+
+                                        ui.table(
+                                            columns=[
+                                                {'name': 'title', 'label': 'Title', 'field': 'title', 'sortable': True,
+                                                 'align': 'left'},
+                                                {'name': 'journal', 'label': 'Journal', 'field': 'journal',
+                                                 'sortable': True, 'align': 'left'},
+                                                {'name': 'publication_date', 'label': 'Publication Date',
+                                                 'field': 'publication_date', 'sortable': True, 'align': 'left'},
+                                            ],
+                                            rows=pubs_data,
+                                            row_key='publication_id'
+                                        ).classes('w-full').props('dense flat bordered')
+                                    else:
+                                        ui.label('No publications recorded').classes('text-gray-500')
+
+                            ui.notify(f'Found {len(publications)} publication(s)', type='positive')
+
+
+                        ui.button('Load Publications', on_click=run_query_publications, icon='menu_book')
+
+                # Query 5: Final year students with high grades
+                with ui.expansion('High-Performing Final Year Students', icon='elevator').classes(
+                        'w-full mb-4'):
+                    with ui.column().classes('w-full gap-4'):
+                        threshold_input = ui.number(
+                            label='Minimum Average Grade (%)',
+                            value=70,
+                            min=0,
+                            max=100,
+                            step=1
+                        ).classes('w-64')
+
+                        query4_result = ui.table(
+                            columns=[
+                                {'name': 'student_id', 'label': 'Student ID', 'field': 'student_id',
+                                 'sortable': True},
+                                {'name': 'name', 'label': 'Name', 'field': 'name', 'sortable': True},
+                                {'name': 'programme_id', 'label': 'Programme ID', 'field': 'programme_id',
+                                 'sortable': True},
+                                {'name': 'year_of_study', 'label': 'Year', 'field': 'year_of_study',
+                                 'sortable': True},
+                                {'name': 'average_grade', 'label': 'Average Grade', 'field': 'average_grade',
+                                 'sortable': True},
+                            ],
+                            rows=[],
+                            row_key='student_id'
+                        ).classes('w-full')
+
+
+                        def run_query_high_performance():
+                            threshold = threshold_input.value
+                            all_students = api.student_repo.get_all()
+
+                            # Get programmes to determine final year
+                            programmes = {p.programme_id: p for p in api.programme_repo.get_all()}
+
+                            results = []
+                            for student in all_students:
+                                # Check if student is in final year
+                                if student.programme_id and student.year_of_study:
+                                    programme = programmes.get(student.programme_id)
+                                    if programme and programme.duration_years:
+                                        is_final_year = student.year_of_study == programme.duration_years
+                                    else:
+                                        # Assume 4 years if duration not specified
+                                        is_final_year = student.year_of_study == 4
+
+                                    if is_final_year:
+                                        # Calculate average grade
+                                        grades = api.student_repo.get_grades(student.student_id)
+                                        if grades:
+                                            grade_values = [g.grade for g in grades if g.grade is not None]
                                             if grade_values:
                                                 avg_grade = sum(grade_values) / len(grade_values)
-                                                overall_grades.append(avg_grade)
+                                                if avg_grade >= threshold:
+                                                    student_dict = student.as_dict
+                                                    student_dict['average_grade'] = f"{avg_grade:.2f}%"
+                                                    results.append(student_dict)
 
-                                                course_data.append({
-                                                    'course_code': course.course_code,
-                                                    'course_name': course.name,
-                                                    'num_assessments': len(grade_values),
-                                                    'average_grade': f"{avg_grade:.2f}%",
-                                                    'credits': course.credits or 'N/A'
-                                                })
-                                        except:
-                                            pass
-
-                                    # Display overall average
-                                    if overall_grades:
-                                        overall_avg = sum(overall_grades) / len(overall_grades)
-                                        ui.label(f'Overall Average Grade: {overall_avg:.2f}%').classes(
-                                            'text-lg font-semibold text-blue-600 mb-3')
-
-                                    # Display course table
-                                    ui.table(
-                                        columns=[
-                                            {'name': 'course_code', 'label': 'Code', 'field': 'course_code',
-                                             'sortable': True},
-                                            {'name': 'course_name', 'label': 'Course', 'field': 'course_name',
-                                             'sortable': True},
-                                            {'name': 'num_assessments', 'label': 'Assessments',
-                                             'field': 'num_assessments', 'sortable': True},
-                                            {'name': 'average_grade', 'label': 'Average',
-                                             'field': 'average_grade', 'sortable': True},
-                                            {'name': 'credits', 'label': 'Credits', 'field': 'credits',
-                                             'sortable': True},
-                                        ],
-                                        rows=course_data,
-                                        row_key='course_code'
-                                    ).classes('w-full')
-                                else:
-                                    ui.label('No grades recorded')
-
-                            # Disciplinary Records Card
-                            with ui.card().classes('w-full'):
-                                ui.label('Disciplinary Records').classes('text-lg font-bold mb-2')
-
-                                disciplinary_records = api.student_repo.get_disciplinary_records(student_id)
-
-                                if disciplinary_records:
-                                    records_data = [{
-                                        'incident_date': r.incident_date or 'N/A',
-                                        'description': r.description or 'N/A',
-                                        'action_taken': r.action_taken or 'N/A'
-                                    } for r in disciplinary_records]
-
-                                    ui.table(
-                                        columns=[
-                                            {'name': 'incident_date', 'label': 'Date', 'field': 'incident_date',
-                                             'sortable': True},
-                                            {'name': 'description', 'label': 'Description',
-                                             'field': 'description', 'sortable': True},
-                                            {'name': 'action_taken', 'label': 'Action Taken',
-                                             'field': 'action_taken', 'sortable': True},
-                                        ],
-                                        rows=records_data,
-                                        row_key='incident_date'
-                                    ).classes('w-full')
-                                else:
-                                    ui.label('No disciplinary records').classes('text-green-600')
-
-                            # Research Projects Card
-                            with ui.card().classes('w-full'):
-                                ui.label('Research Projects').classes('text-lg font-bold mb-2')
-
-                                # Get all projects and check if student is a member
-                                all_projects = api.research_project_repo.get_all()
-                                student_projects = []
-
-                                for project in all_projects:
-                                    # Check if student is in this project
-                                    project_students = api.student_repo.get_by_research_project(
-                                        project.project_id)
-                                    if any(s.student_id == student_id for s in project_students):
-                                        try:
-                                            head_lecturer = api.lecturer_repo.get_by_id(
-                                                project.head_lecturer_id)
-                                            student_projects.append({
-                                                'title': project.title,
-                                                'head_lecturer': head_lecturer.name,
-                                                'start_date': project.start_date or 'N/A',
-                                                'end_date': project.end_date or 'N/A'
-                                            })
-                                        except:
-                                            pass
-
-                                if student_projects:
-                                    ui.table(
-                                        columns=[
-                                            {'name': 'title', 'label': 'Project Title', 'field': 'title',
-                                             'sortable': True},
-                                            {'name': 'head_lecturer', 'label': 'Head Lecturer',
-                                             'field': 'head_lecturer', 'sortable': True},
-                                            {'name': 'start_date', 'label': 'Start Date', 'field': 'start_date',
-                                             'sortable': True},
-                                            {'name': 'end_date', 'label': 'End Date', 'field': 'end_date',
-                                             'sortable': True},
-                                        ],
-                                        rows=student_projects,
-                                        row_key='title'
-                                    ).classes('w-full')
-                                else:
-                                    ui.label('Not involved in any research projects')
-
-                        ui.notify('Student profile loaded', type='positive')
-
-                    ui.button('Load Profile', on_click= run_query_student_profile, icon='person_search')
-
-            # Query 4 - Lecturer Publications
-            with ui.expansion('Lecturer Publications', icon='article').classes('w-full mb-4'):
-                with ui.column().classes('w-full gap-4'):
-                    lecturer_select_pubs = ui.select(
-                        label='Select Lecturer',
-                        options=[f"{l.lecturer_id}: {l.name}" for l in api.lecturer_repo.get_all()],
-                        with_input=True
-                    ).classes('w-full')
-
-                    # Container for lecturer info and publications
-                    publications_container = ui.column().classes('w-full gap-4')
+                            query4_result.rows = results
+                            query4_result.update()
+                            ui.notify(f'Found {len(results)} student(s)', type='positive')
 
 
-                    def run_query_publications():
-                        """
-                            Runs a series of queries to gather a complete picture of a lecturer's publications.
-                            Arguments: None
-                            Returns: All information relevant about a lecturer's publications
-                        """
-                        if not lecturer_select_pubs.value:
-                            ui.notify('Please select a lecturer', type='warning')
-                            return
+                        ui.button('Run Query', on_click=run_query_high_performance, icon='play_arrow')
 
-                        lecturer_id = int(lecturer_select_pubs.value.split(':')[0])
-                        lecturer = api.lecturer_repo.get_by_id(lecturer_id)
-                        publications = api.lecturer_repo.get_publications(lecturer_id)
-
-                        # Clear previous content
-                        publications_container.clear()
-
-                        with publications_container:
-                            # Lecturer Info Card
-                            with ui.card().classes('w-full'):
-                                ui.label(f'{lecturer.name}').classes('text-xl font-bold mb-2')
-                                with ui.grid(columns=2).classes('w-full gap-2'):
-                                    ui.label('Lecturer ID:').classes('font-semibold')
-                                    ui.label(str(lecturer.lecturer_id))
-
-                                    if lecturer.dept_id:
-                                        try:
-                                            dept = api.department_repo.get_by_id(lecturer.dept_id)
-                                            ui.label('Department:').classes('font-semibold')
-                                            ui.label(dept.name)
-                                        except:
-                                            pass
-
-                                    ui.label('Course Load:').classes('font-semibold')
-                                    ui.label(str(lecturer.course_load) if lecturer.course_load else 'N/A')
-
-                                    ui.label('Total Publications:').classes('font-semibold')
-                                    ui.label(str(len(publications))).classes('text-blue-600 font-bold')
-
-                            # Publications Card
-                            with ui.card().classes('w-full'):
-                                ui.label('Publications').classes('text-lg font-bold mb-2')
-
-                                if publications:
-                                    # Create table data
-                                    pubs_data = []
-                                    for pub in publications:
-                                        pubs_data.append({
-                                            'title': pub.title,
-                                            'journal': pub.journal or 'N/A',
-                                            'publication_date': pub.publication_date or 'N/A',
-                                            'publication_id': pub.publication_id
-                                        })
-
-                                    # Sort by date (most recent first)
-                                    pubs_data.sort(
-                                        key=lambda x: x['publication_date'] if x['publication_date'] != 'N/A' else '',
-                                        reverse=True)
-
-                                    ui.table(
-                                        columns=[
-                                            {'name': 'title', 'label': 'Title', 'field': 'title', 'sortable': True,
-                                             'align': 'left'},
-                                            {'name': 'journal', 'label': 'Journal', 'field': 'journal',
-                                             'sortable': True, 'align': 'left'},
-                                            {'name': 'publication_date', 'label': 'Publication Date',
-                                             'field': 'publication_date', 'sortable': True, 'align': 'left'},
-                                        ],
-                                        rows=pubs_data,
-                                        row_key='publication_id'
-                                    ).classes('w-full').props('dense flat bordered')
-                                else:
-                                    ui.label('No publications recorded').classes('text-gray-500')
-
-                        ui.notify(f'Found {len(publications)} publication(s)', type='positive')
-
-
-                    ui.button('Load Publications', on_click=run_query_publications, icon='menu_book')
-
-            # Query 5: Final year students with high grades
-            with ui.expansion('High-Performing Final Year Students', icon='elevator').classes(
-                    'w-full mb-4'):
-                with ui.column().classes('w-full gap-4'):
-                    threshold_input = ui.number(
-                        label='Minimum Average Grade (%)',
-                        value=70,
-                        min=0,
-                        max=100,
-                        step=1
-                    ).classes('w-64')
-
-                    query4_result = ui.table(
-                        columns=[
-                            {'name': 'student_id', 'label': 'Student ID', 'field': 'student_id',
-                             'sortable': True},
-                            {'name': 'name', 'label': 'Name', 'field': 'name', 'sortable': True},
-                            {'name': 'programme_id', 'label': 'Programme ID', 'field': 'programme_id',
-                             'sortable': True},
-                            {'name': 'year_of_study', 'label': 'Year', 'field': 'year_of_study',
-                             'sortable': True},
-                            {'name': 'average_grade', 'label': 'Average Grade', 'field': 'average_grade',
-                             'sortable': True},
-                        ],
-                        rows=[],
-                        row_key='student_id'
-                    ).classes('w-full')
-
-
-                    def run_query_high_performance():
-                        threshold = threshold_input.value
-                        all_students = api.student_repo.get_all()
-
-                        # Get programmes to determine final year
-                        programmes = {p.programme_id: p for p in api.programme_repo.get_all()}
-
-                        results = []
-                        for student in all_students:
-                            # Check if student is in final year
-                            if student.programme_id and student.year_of_study:
-                                programme = programmes.get(student.programme_id)
-                                if programme and programme.duration_years:
-                                    is_final_year = student.year_of_study == programme.duration_years
-                                else:
-                                    # Assume 4 years if duration not specified
-                                    is_final_year = student.year_of_study == 4
-
-                                if is_final_year:
-                                    # Calculate average grade
-                                    grades = api.student_repo.get_grades(student.student_id)
-                                    if grades:
-                                        grade_values = [g.grade for g in grades if g.grade is not None]
-                                        if grade_values:
-                                            avg_grade = sum(grade_values) / len(grade_values)
-                                            if avg_grade >= threshold:
-                                                student_dict = student.as_dict
-                                                student_dict['average_grade'] = f"{avg_grade:.2f}%"
-                                                results.append(student_dict)
-
-                        query4_result.rows = results
-                        query4_result.update()
-                        ui.notify(f'Found {len(results)} student(s)', type='positive')
-
-
-                    ui.button('Run Query', on_click=run_query_high_performance, icon='play_arrow')
-
-ui.run()
+def run_app():
+    """Entry point for the GUI application."""
+    ui.run(reload=False)
