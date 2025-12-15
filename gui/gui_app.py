@@ -1344,6 +1344,10 @@ with ui.column().classes('w-full'):
                                 tbl_view_departments.rows[:] = all_departments_df.to_dict('records')
                                 tbl_view_departments.update()
 
+                                next_dept_id = get_next_dept_id(all_departments_df)
+                                new_department_inputs['dept_id'].value = int(next_dept_id)
+                                new_department_inputs['dept_id'].update()
+
                             with ui.row().classes('gap-2 mt-4'):
                                 ui.button('Cancel', on_click=add_department_dialog.close)
                                 ui.button('Save', on_click=save_department)
