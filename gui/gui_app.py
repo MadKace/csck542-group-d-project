@@ -449,7 +449,7 @@ with ui.column().classes('w-full'):
 
                                 refresh_lecturer_dropdowns()
 
-                                next_lecturer_id = get_next_student_id(all_students_df)
+                                next_lecturer_id = get_next_student_id(all_lecturers_df)
                                 new_lecturer_inputs['lecturer_id'].value = int(next_lecturer_id)
                                 new_lecturer_inputs['lecturer_id'].update()
 
@@ -747,6 +747,9 @@ with ui.column().classes('w-full'):
                                 tbl_view_staff.rows[:] = all_staff_df.to_dict('records')
                                 tbl_view_staff.update()
 
+                                next_staff_id = get_next_staff_id(all_staff_df)
+                                new_staff_inputs['staff_id'].value = int(next_staff_id)
+                                new_staff_inputs['staff_id'].update()
 
                             with ui.row().classes('gap-2 mt-4'):
                                 ui.button('Cancel', on_click=add_staff_dialog.close)
