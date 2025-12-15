@@ -88,9 +88,16 @@ pip install -r requirements.txt
 3. Create a fresh database
 
 Remove any existing DB files:
+
+**MacOS / Linux**
 ```
 rm database/university.db
 rm database/university.db.enc
+```
+**Windows (CMD)**
+```
+del database\university.db
+del database\university.db.enc
 ```
 Initialise a fresh database:
 ```
@@ -104,13 +111,13 @@ DB_ENCRYPTION_KEY=your_new_key_here python main.py
 ```
 **Windows (CMD)**
 ```
-set DB_ENCRYPTION_KEY=your_new_key_here
-python main.py
+set DB_ENCRYPTION_KEY=your_new_key_here && python main.py
 ```
 4. Run the GUI application
+
 The database is encrypted using AES-256.
 The required encryption key for this submission is:
-csck542
+`csck542`
 
 **MacOS / Linux**
 ```
