@@ -1047,6 +1047,10 @@ with ui.column().classes('w-full'):
                                 tbl_view_courses.rows[:] = all_courses_df.to_dict('records')
                                 tbl_view_courses.update()
 
+                                next_course_id = get_next_course_id(all_courses_df)
+                                new_course_inputs['course_id'].value = int(next_course_id)
+                                new_course_inputs['course_id'].update()
+
                             with ui.row().classes('gap-2 mt-4'):
                                 ui.button('Cancel', on_click=add_course_dialog.close)
                                 ui.button('Save', on_click=save_course)
