@@ -683,10 +683,41 @@ with ui.column().classes('w-full'):
         with ui.tab_panel(tab_qr):
             with ui.row().classes('w-full justify-center mb-4'):
                 ui.label('Queries and Reports').classes('text-xl')
-            with ui.tabs().classes('w-full') as qr_ops:
-                tab_qr_view = ui.tab('View Queries and Reports')
-            with ui.tab_panels(qr_ops).classes('w-full'):
-                with ui.tab_panel(tab_qr_view).classes('w-full'):
-                    ui.label('TBA')
+            #Query 1: Students advised by a lecturer:
+            with ui.expansion('Students Advised by Lecturer', icon='school').classes('w-full mb-4'):
+                with ui.column().classes('w-full gap-4'):
+                    lecturer_select = ui.select(
+                        label='Select Lecturer',
+                        options=[f"{l.lecturer_id}: {l.name}" for l in api.lecturer_repo.get_all()],
+                        with_input=True
+                    ).classes('w-full')
+
+                    query_students_advised_by_lecturer_result = ui.table(
+                        columns=[
+                            {'name': 'student_id', 'label': 'Student ID', 'field': 'student_id', 'sortable': True},
+                            {'name': 'name', 'label': 'Name', 'field': 'name', 'sortable': True},
+                            {'name': 'programme_id', 'label': 'Programme ID', 'field': 'programme_id',
+                             'sortable': True},
+                            {'name': 'year_of_study', 'label': 'Year', 'field': 'year_of_study', 'sortable': True},
+                        ],
+                        rows=[],
+                        row_key='student_id'
+                    ).classes('w-full')
+
+
+                    def run_query_students_advised_by_lecturer():
+                        if not lecturer_select.value:
+                            ui.notify('Please select a lecturer', type='warning')
+                            return
+
+                        lecturer_id = int(lecturer_select.value.split(':')[0])
+                        students = api.student_repo.get_by_advisor(lecturer_id)
+
+                        query1_result.rows = [s.as_dict for s in students]
+                        query1_result.update()
+                        ui.notify(f'Found {len(students)} student(s)', type='positive')
+
+
+                    ui.button('Run Query', on_click=run_query_students_advised_by_lecturer, icon='play_arrow')
 
 ui.run()
