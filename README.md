@@ -72,55 +72,52 @@ README.md
 1. Create and activate a virtual environment
 
 **MacOS / Linux**
-
+```
 python -m venv venv
-
 source venv/bin/activate
-
+```
 **Windows (CMD)**
-
+```
 python -m venv venv
-
 venv\Scripts\activate
-
+```
 2. Install dependencies
-
+```
 pip install -r requirements.txt
-
+```
 3. Create a fresh database
 
 Remove any existing DB files:
-
+```
 rm database/university.db
-
 rm database/university.db.enc
-
+```
 Initialise a fresh database:
-
+```
 python scripts/init_db.py
-
+```
 Run the application and generate a new encryption key:
 
 **MacOS / Linux**
-
+```
 DB_ENCRYPTION_KEY=your_new_key_here python main.py
-
+```
 **Windows (CMD)**
-
+```
 set DB_ENCRYPTION_KEY=your_new_key_here
 python main.py
-
+```
 4. Run the GUI application
 The database is encrypted using AES-256.
 The required encryption key for this submission is:
 csck542
 
 **MacOS / Linux**
-
+```
 DB_ENCRYPTION_KEY=csck542 python main.py
-
+```
 **Windows (CMD)**
-
+```
 set DB_ENCRYPTION_KEY=csck542 && python main.py
-
+```
 The application will launch in a browser window using the encrypted SQLite database provided in the repository.
