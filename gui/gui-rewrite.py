@@ -472,3 +472,123 @@ def create_delete_dialog(service):
             ui.button('Delete', on_click=delete, color='red')
 
     return dialog
+
+"""
+Entity Panel Factory
+
+Rather than have separate panels defined, can instead define configurations that are then referenced by functions
+to create panels identical in structure but variant in data based on desired entity
+"""
+
+def create_entity_panel(config):
+    """
+        Creates an entity panel
+        Arguments: configuration aka for what entity
+        Returns: Panel and sub-panel for respective entity
+    """
+
+    # Create view table with search/filter
+    with ui.tab_panel(config['view_tab']).classes('w-full'):
+
+        # Filter inputs container
+        filter_inputs = {}
+        current_filters = {}
+
+        with ui.expansion('Search & Filter', icon='search').classes('w-full mb-4'):
+            with ui.grid(columns=3).classes('w-full gap-4'):
+                for col in config['df'].columns:
+                    filter_inputs[col] = ui.input(
+                        label=f'Search {col.replace("_", " ").title()}',
+                        placeholder=f'Filter by {col.replace("_", " ")}...'
+                    ).classes('w-full')
+
+        # Table
+        columns = create_table_columns(config['df'])
+        rows = config['df'].to_dict(orient='records')
+
+        table = ui.table(
+            columns=columns,
+            rows=rows,
+            row_key=config['id_column'],
+        ).classes('w-full border border-black text-black bg-white')
+
+        # Add pagination
+        table.add_slot('top-right', r'''
+               <q-input dense debounce="300" v-model="props.filter" placeholder="Quick search">
+                   <template v-slot:append>
+                       <q-icon name="search" />
+                   </template>
+               </q-input>
+           ''')
+        table.props('dense')
+        table.props('flat bordered')
+        table.props(':rows-per-page-options="[10, 25, 50, 100, 0]"')
+
+        config['table'] = table
+        config['filter_inputs'] = filter_inputs
+
+
+        # Filter function
+        def apply_filters():
+            """
+                Applies filters
+                Arguments: Uses previously set filters
+                Returns: Filtered table
+            """
+            filters = {col: inp.value for col, inp in filter_inputs.items()}
+            filtered_df = filter_dataframe(config['df'], filters)
+
+            # Update table
+            table.rows = filtered_df.to_dict('records')
+            table.update()
+
+            row_count = len(filtered_df)
+            total_count = len(config['df'])
+            ui.notify(f'Showing {row_count} of {total_count} records', type='info')
+
+
+        def clear_filters():
+            """
+                Clears filters
+                Arguments: Clears set filters
+                Returns: Unfiltered table
+            """
+            for inp in filter_inputs.values():
+                inp.value = ''
+
+            # Reset table to show all data
+            table.rows = config['df'].to_dict('records')
+            table.update()
+            ui.notify('Filters cleared', type='info')
+
+
+        # Connect filter inputs to apply function
+        for inp in filter_inputs.values():
+            inp.on('keyup.enter', apply_filters)
+
+        # Filter action buttons
+        with ui.row().classes('gap-2 mt-2'):
+            ui.button('Apply Filters', on_click=apply_filters, icon='filter_alt')
+            ui.button('Clear Filters', on_click=clear_filters, icon='clear')
+
+    # Create manage panel
+    with ui.tab_panel(config['manage_tab']).classes('w-full'):
+        # Initialize service
+        service = CRUDService(
+            entity_name=config['display_name'],
+            df=config['df'],
+            repo=config['repo'],
+            id_column=config['id_column'],
+            table_widget=table
+        )
+
+        # Create dialogs
+        add_dialog = create_add_dialog(service)
+        edit_dialog = create_edit_dialog(service)
+        delete_dialog = create_delete_dialog(service)
+
+        # Create action buttons
+        with ui.row().classes('gap-4'):
+            ui.button('Add', on_click=lambda: add_dialog.open())
+            ui.button('Edit', on_click=lambda: edit_dialog.open())
+            ui.button('Delete', on_click=lambda: delete_dialog.open(), color='red')
