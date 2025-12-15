@@ -269,3 +269,206 @@ def create_add_dialog(service):
             ui.button('Save', on_click = save)
 
     return dialog
+
+def create_edit_dialog(service):
+    """
+        Creates a dialog box for editing an existing entity
+        Arguments: service, aka for which entity
+        Returns: Appropriate Dialog box
+    """
+    dialog = ui.dialog()
+    selected_id = {'value': None}
+
+    with dialog, ui.card().classes('w-[400px]'):
+        ui.label(f'Edit {service.entity_name}').classes('text-lg font-bold')
+
+        inputs = {}
+        df = service.get_df()
+
+        def load_entity():
+            """
+                Loads the correct entity based on provided data from outside the scope of the function, not passed into
+                function, for viewing and editing
+                Arguments: None
+                Returns: Loads entity
+            """
+            id_value = inputs['id_selector'].value
+
+            if not id_value or not id_value.strip():
+                ui.notify(f'Please enter a {service.entity_name} ID', type='negative')
+                return
+
+            try:
+                id_int = int(id_value)
+            except ValueError:
+                ui.notify(f'{service.entity_name} ID must be a number', type='negative')
+                return
+
+            if id_int not in service.get_df()[service.id_column].values:
+                ui.notify(f'{service.entity_name} ID {id_int} does not exist', type='negative')
+                return
+
+            selected_id['value'] = id_int
+            entity_row = service.get_df()[service.get_df()[service.id_column] == id_int].iloc[0]
+
+            for col in service.get_df().columns:
+                if col != service.id_column:
+                    inputs[col].value = str(entity_row[col])
+
+            ui.notify(f'Loaded {service.entity_name} {id_int}', type='positive')
+
+        # ID selector
+        with ui.row().classes('w-full items-end gap-2'):
+            inputs['id_selector'] = ui.select(
+                label=f'{service.entity_name} ID',
+                options=sorted(df[service.id_column].astype(str).tolist()),
+                with_input=True
+            ).classes('flex-grow')
+            service.register_dropdown(inputs['id_selector'])
+            ui.button('Load', on_click=load_entity)
+
+        ui.separator()
+
+        # Create input fields for other columns
+        for col in df.columns:
+            if col != service.id_column:
+                inputs[col] = ui.input(label=col.replace('_', ' ').title()).props('readonly')
+
+        def enable_editing():
+            """
+                Enables editing once the data is loaded, preventing accidental editing.
+                Arguments: None
+                Returns: Unlocks fields of an entity for editing
+            """
+            if selected_id['value'] is None:
+                ui.notify(f'Please load a {service.entity_name} first', type='negative')
+                return
+
+            for col in service.get_df().columns:
+                if col != service.id_column:
+                    inputs[col].props(remove='readonly')
+
+        def save():
+            """
+                Saves the updated data for the entity, requiring positive affirmation before editing data
+                Arguments: None
+                Returns: Saves updates to entity
+            """
+            if selected_id['value'] is None:
+                ui.notify(f'Please load a {service.entity_name} first', type='negative')
+                return
+
+            updated_data = {col: inp.value for col, inp in inputs.items()
+                            if col != 'id_selector'}
+
+            is_valid, invalid_col = validate_fields(updated_data, service.id_column)
+            if not is_valid:
+                ui.notify(f'{invalid_col.replace("_", " ").title()} cannot be blank', type='negative')
+                return
+
+            service.update(selected_id['value'], updated_data)
+            dialog.close()
+
+        with ui.row().classes('gap-2 mt-4'):
+            ui.button('Cancel', on_click=dialog.close)
+            ui.button('Edit', on_click=enable_editing)
+            ui.button('Save', on_click=save)
+
+    return dialog
+
+def create_delete_dialog(service):
+    """
+        Creates a dialog box for deleting an existing entity
+        Arguments: service, aka for which entity
+        Returns: Appropriate Dialog box
+    """
+    dialog = ui.dialog()
+    selected_id = {'value': None}
+
+    with dialog, ui.card().classes('w-[400px]'):
+        ui.label(f'Delete {service.entity_name}').classes('text-lg font-bold')
+
+        inputs = {}
+        df = service.get_df()
+
+        def load_entity():
+            """
+                Loads the correct entity based on provided data from outside the scope of the function, not passed into
+                function, for viewing and editing
+                Arguments: None
+                Returns: Loads entity
+            """
+            id_value = inputs['id_selector'].value
+
+            if not id_value or not id_value.strip():
+                ui.notify(f'Please enter a {service.entity_name} ID', type='negative')
+                return
+
+            try:
+                id_int = int(id_value)
+            except ValueError:
+                ui.notify(f'{service.entity_name} ID must be a number', type='negative')
+                return
+
+            if id_int not in service.get_df()[service.id_column].values:
+                ui.notify(f'{service.entity_name} ID {id_int} does not exist', type='negative')
+                return
+
+            selected_id['value'] = id_int
+            entity_row = service.get_df()[service.get_df()[service.id_column] == id_int].iloc[0]
+
+            for col in service.get_df().columns:
+                if col != service.id_column:
+                    inputs[col].value = str(entity_row[col])
+
+            ui.notify(f'Loaded {service.entity_name} {id_int}', type='positive')
+
+        # ID selector
+        with ui.row().classes('w-full items-end gap-2'):
+            inputs['id_selector'] = ui.select(
+                label=f'{service.entity_name} ID',
+                options=sorted(df[service.id_column].astype(str).tolist()),
+                with_input=True
+            ).classes('flex-grow')
+            service.register_dropdown(inputs['id_selector'])
+            ui.button('Load', on_click=load_entity)
+
+        ui.separator()
+
+        # Create readonly input fields
+        for col in df.columns:
+            if col != service.id_column:
+                inputs[col] = ui.input(label=col.replace('_', ' ').title()).props('readonly')
+
+        ui.separator()
+        ui.label('Warning: This action cannot be undone!').classes('text-red-600 font-semibold')
+
+        def delete():
+            """
+                Deletes the entity
+                Arguments: None
+                Returns: Deletes entity
+            """
+            if selected_id['value'] is None:
+                ui.notify(f'Please load a {service.entity_name} first', type='negative')
+                return
+
+            try:
+                service.delete(selected_id['value'])
+
+                # Reset dialog
+                selected_id['value'] = None
+                for col in service.get_df().columns:
+                    if col != service.id_column:
+                        inputs[col].value = ''
+                inputs['id_selector'].value = None
+
+                dialog.close()
+            except Exception as e:
+                ui.notify(f'Error deleting {service.entity_name}: {str(e)}', type='negative')
+
+        with ui.row().classes('gap-2 mt-4'):
+            ui.button('Cancel', on_click=dialog.close)
+            ui.button('Delete', on_click=delete, color='red')
+
+    return dialog
