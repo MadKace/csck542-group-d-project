@@ -850,6 +850,70 @@ with ui.column().classes('w-full'):
                                 else:
                                     ui.label('No advisor assigned')
 
+                            # Courses and Grades Card
+                            with ui.card().classes('w-full'):
+                                ui.label('Courses and Grades').classes('text-lg font-bold mb-2')
+
+                                # Get all grades for the student
+                                grades = api.student_repo.get_grades(student_id)
+
+                                if grades:
+                                    # Group grades by course
+                                    course_grades = {}
+                                    for grade in grades:
+                                        if grade.course_id not in course_grades:
+                                            course_grades[grade.course_id] = []
+                                        course_grades[grade.course_id].append(grade)
+
+                                    course_data = []
+                                    overall_grades = []
+
+                                    for course_id, grade_list in course_grades.items():
+                                        try:
+                                            course = api.course_repo.get_by_id(course_id)
+                                            grade_values = [g.grade for g in grade_list if g.grade is not None]
+
+                                            if grade_values:
+                                                avg_grade = sum(grade_values) / len(grade_values)
+                                                overall_grades.append(avg_grade)
+
+                                                course_data.append({
+                                                    'course_code': course.course_code,
+                                                    'course_name': course.name,
+                                                    'num_assessments': len(grade_values),
+                                                    'average_grade': f"{avg_grade:.2f}%",
+                                                    'credits': course.credits or 'N/A'
+                                                })
+                                        except:
+                                            pass
+
+                                    # Display overall average
+                                    if overall_grades:
+                                        overall_avg = sum(overall_grades) / len(overall_grades)
+                                        ui.label(f'Overall Average Grade: {overall_avg:.2f}%').classes(
+                                            'text-lg font-semibold text-blue-600 mb-3')
+
+                                    # Display course table
+                                    ui.table(
+                                        columns=[
+                                            {'name': 'course_code', 'label': 'Code', 'field': 'course_code',
+                                             'sortable': True},
+                                            {'name': 'course_name', 'label': 'Course', 'field': 'course_name',
+                                             'sortable': True},
+                                            {'name': 'num_assessments', 'label': 'Assessments',
+                                             'field': 'num_assessments', 'sortable': True},
+                                            {'name': 'average_grade', 'label': 'Average',
+                                             'field': 'average_grade', 'sortable': True},
+                                            {'name': 'credits', 'label': 'Credits', 'field': 'credits',
+                                             'sortable': True},
+                                        ],
+                                        rows=course_data,
+                                        row_key='course_code'
+                                    ).classes('w-full')
+                                else:
+                                    ui.label('No grades recorded')
+
+
                     ui.button('Load Profile', on_click= run_query_student_profile, icon='person_search')
 
 
