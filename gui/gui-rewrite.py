@@ -706,6 +706,11 @@ with ui.column().classes('w-full'):
 
 
                     def run_query_students_advised_by_lecturer():
+                        """
+                            Runs query for students advised by selected lecturer
+                            Arguments: None
+                            Returns: Students advised by selected lecturer
+                        """
                         if not lecturer_select.value:
                             ui.notify('Please select a lecturer', type='warning')
                             return
@@ -744,6 +749,11 @@ with ui.column().classes('w-full'):
 
 
                     def query_courses_by_department():
+                        """
+                            Runs query for courses offered by selected department
+                            Arguments: None
+                            Returns: Students advised by selected lecturer
+                        """
                         if not dept_select.value:
                             ui.notify('Please select a department', type='warning')
                             return
@@ -758,6 +768,7 @@ with ui.column().classes('w-full'):
 
                     ui.button('Run Query', on_click=query_courses_by_department, icon='play_arrow')
 
+            # Query 3 - Complete Student Profile
             with ui.expansion('Complete Student Profile', icon='person_search').classes('w-full mb-4'):
                 with ui.column().classes('w-full gap-4'):
                     student_select_profile = ui.select(
@@ -771,6 +782,11 @@ with ui.column().classes('w-full'):
                     profile_container = ui.column().classes('w-full gap-4')
 
                     def run_query_student_profile():
+                        """
+                            Runs a series of queries to gather a complete picture of a student's performance
+                            Arguments: None
+                            Returns: All information relevant about a student
+                        """
                         if not student_select_profile.value:
                             ui.notify('Please select a student', type='warning')
                             return
@@ -986,9 +1002,98 @@ with ui.column().classes('w-full'):
 
                         ui.notify('Student profile loaded', type='positive')
 
-
                     ui.button('Load Profile', on_click= run_query_student_profile, icon='person_search')
 
+            # Query 4 - Lecturer Publications
+            with ui.expansion('Lecturer Publications', icon='article').classes('w-full mb-4'):
+                with ui.column().classes('w-full gap-4'):
+                    lecturer_select_pubs = ui.select(
+                        label='Select Lecturer',
+                        options=[f"{l.lecturer_id}: {l.name}" for l in api.lecturer_repo.get_all()],
+                        with_input=True
+                    ).classes('w-full')
 
+                    # Container for lecturer info and publications
+                    publications_container = ui.column().classes('w-full gap-4')
+
+
+                    def run_query_publications():
+                        """
+                            Runs a series of queries to gather a complete picture of a lecturer's publications.
+                            Arguments: None
+                            Returns: All information relevant about a lecturer's publications
+                        """
+                        if not lecturer_select_pubs.value:
+                            ui.notify('Please select a lecturer', type='warning')
+                            return
+
+                        lecturer_id = int(lecturer_select_pubs.value.split(':')[0])
+                        lecturer = api.lecturer_repo.get_by_id(lecturer_id)
+                        publications = api.lecturer_repo.get_publications(lecturer_id)
+
+                        # Clear previous content
+                        publications_container.clear()
+
+                        with publications_container:
+                            # Lecturer Info Card
+                            with ui.card().classes('w-full'):
+                                ui.label(f'{lecturer.name}').classes('text-xl font-bold mb-2')
+                                with ui.grid(columns=2).classes('w-full gap-2'):
+                                    ui.label('Lecturer ID:').classes('font-semibold')
+                                    ui.label(str(lecturer.lecturer_id))
+
+                                    if lecturer.dept_id:
+                                        try:
+                                            dept = api.department_repo.get_by_id(lecturer.dept_id)
+                                            ui.label('Department:').classes('font-semibold')
+                                            ui.label(dept.name)
+                                        except:
+                                            pass
+
+                                    ui.label('Course Load:').classes('font-semibold')
+                                    ui.label(str(lecturer.course_load) if lecturer.course_load else 'N/A')
+
+                                    ui.label('Total Publications:').classes('font-semibold')
+                                    ui.label(str(len(publications))).classes('text-blue-600 font-bold')
+
+                            # Publications Card
+                            with ui.card().classes('w-full'):
+                                ui.label('Publications').classes('text-lg font-bold mb-2')
+
+                                if publications:
+                                    # Create table data
+                                    pubs_data = []
+                                    for pub in publications:
+                                        pubs_data.append({
+                                            'title': pub.title,
+                                            'journal': pub.journal or 'N/A',
+                                            'publication_date': pub.publication_date or 'N/A',
+                                            'publication_id': pub.publication_id
+                                        })
+
+                                    # Sort by date (most recent first)
+                                    pubs_data.sort(
+                                        key=lambda x: x['publication_date'] if x['publication_date'] != 'N/A' else '',
+                                        reverse=True)
+
+                                    ui.table(
+                                        columns=[
+                                            {'name': 'title', 'label': 'Title', 'field': 'title', 'sortable': True,
+                                             'align': 'left'},
+                                            {'name': 'journal', 'label': 'Journal', 'field': 'journal',
+                                             'sortable': True, 'align': 'left'},
+                                            {'name': 'publication_date', 'label': 'Publication Date',
+                                             'field': 'publication_date', 'sortable': True, 'align': 'left'},
+                                        ],
+                                        rows=pubs_data,
+                                        row_key='publication_id'
+                                    ).classes('w-full').props('dense flat bordered')
+                                else:
+                                    ui.label('No publications recorded').classes('text-gray-500')
+
+                        ui.notify(f'Found {len(publications)} publication(s)', type='positive')
+
+
+                    ui.button('Load Publications', on_click=run_query_publications, icon='menu_book')
 
 ui.run()
