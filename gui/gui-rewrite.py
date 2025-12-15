@@ -804,6 +804,30 @@ with ui.column().classes('w-full'):
                                     ui.label('Graduation Status:').classes('font-semibold')
                                     ui.label(student.graduation_status or 'N/A')
 
+                            # Programme Information Card
+                            with ui.card().classes('w-full'):
+                                ui.label('Programme Information').classes('text-lg font-bold mb-2')
+                                if student.programme_id:
+                                    try:
+                                        programme = api.programme_repo.get_by_id(student.programme_id)
+                                        with ui.grid(columns=2).classes('w-full gap-2'):
+                                            ui.label('Programme:').classes('font-semibold')
+                                            ui.label(programme.name)
+
+                                            ui.label('Degree Awarded:').classes('font-semibold')
+                                            ui.label(programme.degree_awarded or 'N/A')
+
+                                            ui.label('Duration:').classes('font-semibold')
+                                            ui.label(
+                                                f"{programme.duration_years} years" if programme.duration_years else 'N/A')
+
+                                            ui.label('Enrolment Details:').classes('font-semibold')
+                                            ui.label(programme.enrolment_details or 'N/A')
+                                    except:
+                                        ui.label('Programme information not available')
+                                else:
+                                    ui.label('No programme assigned')
+
                     ui.button('Load Profile', on_click= run_query_student_profile, icon='person_search')
 
 
