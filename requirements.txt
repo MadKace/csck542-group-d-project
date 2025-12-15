@@ -1,2 +1,4 @@
 sqlalchemy>=2.0
 faker>=28.0
+nicegui==3.4.0
+pandas==2.3.3
