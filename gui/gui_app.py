@@ -78,6 +78,14 @@ with ui.column().classes('w-full'):
                         row_key='student_id',
                     ).classes('w-full border border-black text-black bg-white')
                 with ui.tab_panel(tab_students_manage).classes('w-full'):
+
+                    def refresh_student_dropdowns():
+                        updated_options = sorted(all_students_df['student_id'].astype(str).tolist())
+                        edit_student_inputs['student_id_selector'].options = updated_options
+                        edit_student_inputs['student_id_selector'].update()
+                        delete_student_inputs['student_id_selector'].options = updated_options
+                        delete_student_inputs['student_id_selector'].update()
+
                     with ui.dialog() as add_student_dialog:
                         with ui.card().classes('w-[400px]'):
                             ui.label('Add Student').classes('text-lg font-bold')
@@ -121,7 +129,10 @@ with ui.column().classes('w-full'):
                                 api.commit()
 
                                 global all_students_df
-                                all_students_df = pd.concat([all_students_df, pd.DataFrame([student_data])],
+ #                               all_students_df = pd.concat([all_students_df, pd.DataFrame([student_data])],
+ #                                                           ignore_index=True)
+
+                                all_students_df = pd.concat([all_students_df, pd.DataFrame([student.as_dict])],
                                                             ignore_index=True)
 
                                 add_student_dialog.close()
@@ -129,6 +140,8 @@ with ui.column().classes('w-full'):
 
                                 tbl_view_students.rows[:] = all_students_df.to_dict('records')
                                 tbl_view_students.update()
+
+                                refresh_student_dropdowns()
 
                             with ui.row().classes('gap-2 mt-4'):
                                 ui.button('Cancel', on_click=add_student_dialog.close)
@@ -332,9 +345,10 @@ with ui.column().classes('w-full'):
                                         delete_student_inputs[col].value = ''
                                 delete_student_inputs['student_id_selector'].value = None
 
+                                refresh_student_dropdowns()
+
                                 delete_student_dialog.close()
                                 ui.notify('Student deleted successfully', type='positive')
-
 
                             with ui.row().classes('gap-2 mt-4'):
                                 ui.button('Cancel', on_click=delete_student_dialog.close)
